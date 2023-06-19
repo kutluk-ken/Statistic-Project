@@ -10,6 +10,8 @@
 library(shiny)
 library(readxl)
 library(shinydashboard)
+library(ggplot2)
+
 
 
 # Define UI for application that draws a histogram
@@ -34,7 +36,9 @@ ui <- dashboardPage(
   dashboardBody(
     tabItems(
       tabItem("Overview",
-              h2("Overview Tab Content")
+              fluidRow(
+                box(plotOutput("pie_chart"), height = 300)
+              )
       ),
       tabItem("Rat_Performance",
               h2("Rat Performance Tab Content")

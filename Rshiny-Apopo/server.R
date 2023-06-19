@@ -9,16 +9,33 @@
 
 library(shiny)
 library(readxl)
+library(ggplot2)
 
+# # Read the data file
+# data <- read_excel("/Users/kutlukanwar/Desktop/STAD94/TBdetectionRats_Tanzania.xlsx", sheet = 3, col_names = TRUE)
+# reused_data <- data$REUSED
 # Define server logic required to draw a histogram
 function(input, output, session){
-  # Read XLSX file
-  data <- reactive({
-    read_excel("/Users/kutlukanwar/Desktop/STAD94/TBdetectionRats_Tanzania.xlsx", sheet = 2, col_names = TRUE)
+  # Read the data file
+  data <- read_excel("/Users/kutlukanwar/Desktop/STAD94/TBdetectionRats_Tanzania.xlsx", sheet = 3, col_names = TRUE)
+
+
+  reused_sample_counts <- reactive({
+    fresh_count <- nrow(data[data$REUSED == 1, ])
+    reused_count <- nrow(data[data$REUSED > 1, ])
+    counts <- data.frame(REUSED = c("Fresh", "Reused"), COUNT = c(fresh_count, reused_count))
+    counts
+  })
+
+  output$pie_chart <- renderPlot({
+    counts <- reused_sample_counts()
+    ggplot(counts, aes(x = "", y = COUNT, fill = REUSED)) +
+      geom_bar(stat = "identity", width = 1, color = "white") +
+      coord_polar("y") +
+      labs(fill = "Sample Type") +
+      theme_void() +
+      theme(legend.position = "right")
   })
   
-  # Output summary
-  output$summary <- renderPrint({
-    data()
-  })
+
 }
