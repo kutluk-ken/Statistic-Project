@@ -38,8 +38,12 @@ ui <- dashboardPage(
       tabItem("Overview",
               h2("Overview"),
               tabsetPanel(
-                tabPanel("Total Program Results",tableOutput("resultTable"))
+                tabPanel("Total Program Results",tableOutput("TPR"))
+              ),
+              tabsetPanel(
+                tabPanel("Program-Level Sample Details",tableOutput("PLSD_DOTs"))
               )
+              
       ),
       tabItem("Rat_Performance",
               h2("Rat Performance Tab Content"),

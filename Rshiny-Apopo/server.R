@@ -467,15 +467,15 @@ function(input, output, session){
   # DOTS Unconfirmed HITS (Negative sample that are detected as positive?) !
   UnconfirmedNegHit <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 1 & TB_Adtl$RatHit > 0)$ID_SAMPLE)
   # DOTS Total New Case - Sample
-  TotalNewCase <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0)$ID_SAMPLE)  
+  TotalNewCase <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 1)$ID_SAMPLE)  
   # DOTS Total New Case - Patients
-  TotalNewCasePatient <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0)$ID_PATIENT)  
+  TotalNewCasePatient <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 1)$ID_PATIENT)  
   
   TotalSampleCase <- TotalDOTSPos + TotalDotsNegative
   TotalPatientCase <- TotalDotsPosPatient + TotalDotsNegPatient
   
-  # Create the data for the table
-  overview <- data.frame(
+  # Create the data for the overview table
+  overview_TPR <- data.frame(
     Category = c("DOTS Positive", "Blinds", "DOTS Negative", "Neg samples indicated", 
                  "Unconfirmed HITS", "New Cases", "Avg #Rats HIT New Case", 
                  "Total Cases", "Increase in detection"),
@@ -491,15 +491,37 @@ function(input, output, session){
                    paste0(round((TotalNewCase / TotalDotsNegative) * 100, 1), "%"), NA, NA,
                    paste0(round(( TotalNewCase / TotalDotsPosPatient) * 100, 1), "%"))
   ) 
-
   
+  # Program-Level Sample Details
+  TotalDOTSPos3Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 13)$ID_SAMPLE)
+  TotalDOTSPos2Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 12)$ID_SAMPLE)
+  TotalDOTSPos1Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 11)$ID_SAMPLE)
+  TotalNewCase1Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 11)$ID_SAMPLE)  
+  TotalNewCase2Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 12)$ID_SAMPLE)  
+  TotalNewCase3Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 13)$ID_SAMPLE)  
+  TotalDOTSPosScanty <- TotalDOTSPos - TotalDOTSPos3Plus - TotalDOTSPos2Plus - TotalDOTSPos1Plus # CHECK!!! 
+  TotalNewCaseScanty <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS > 1)$ID_SAMPLE) - TotalNewCase1Plus - TotalNewCase2Plus - TotalNewCase3Plus
   
+  #  Create the data for the Program-Level Sample Details table
+  overview_PLSD_DOTs <- data.frame(
+    "Bact load" = c("3+", "2+", "1+", "Scanty", "Total"),
+    "Total" = c(TotalDOTSPos3Plus, TotalDOTSPos2Plus, TotalDOTSPos1Plus, TotalDOTSPosScanty, TotalDOTSPos),
+    "% Total" = c(round((TotalDOTSPos3Plus / TotalDOTSPos) * 100, 1), 
+                  round((TotalDOTSPos2Plus / TotalDOTSPos) * 100, 1),
+                  round((TotalDOTSPos1Plus / TotalDOTSPos) * 100, 1),
+                  round((TotalDOTSPosScanty / TotalDOTSPos) * 100, 1),
+                  100.0)
+  ) 
   
-  # OVERVIEW table in UI
-  output$resultTable <- renderTable({
-    overview
+  # Total Program Results table in UI
+  output$TPR <- renderTable({
+    overview_TPR
   })
   
+  # Program-Level Sample Details in UI
+  output$PLSD_DOTs <- renderTable({
+    overview_PLSD_DOTs
+  })
   
   # Render the tables in the UI
   output$Sensitivity_trainer_table_daily <- renderTable({
