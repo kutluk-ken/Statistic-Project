@@ -10,6 +10,7 @@
 library(shiny)
 library(readxl)
 library(ggplot2)
+library(DT)
 
 # # Read the data file
 # data <- read_excel("/Users/kutlukanwar/Desktop/STAD94/TBdetectionRats_Tanzania.xlsx", sheet = 3, col_names = TRUE)
@@ -17,30 +18,31 @@ library(ggplot2)
 # Define server logic required to draw a histogram
 function(input, output, session){
   # Read the data file
-  data <- read_excel("/Users/kutlukanwar/Desktop/STAD94/TBdetectionRats_Tanzania.xlsx", sheet = 3, col_names = TRUE)
+  #data <- read_excel("/Users/kutlukanwar/Desktop/STAD94/TBdetectionRats_Tanzania.xlsx", sheet = 3, col_names = TRUE)
   
   TB_rat <- read_excel("TBdetectionRats_Tanzania.xlsx", sheet = 2, col_names = TRUE)
   
   TB_Adtl <- read_excel("TBdetectionRats_Tanzania.xlsx", sheet = 3, col_names = TRUE)
   
   # Pie Chart
-  reused_sample_counts <- reactive({
-    fresh_count <- nrow(data[data$REUSED == 1, ])
-    reused_count <- nrow(data[data$REUSED > 1, ])
-    counts <- data.frame(REUSED = c("Fresh", "Reused"), COUNT = c(fresh_count, reused_count))
-    counts
-  })
-  
-  output$pie_chart <- renderPlot({
-    counts <- reused_sample_counts()
-    ggplot(counts, aes(x = "", y = COUNT, fill = REUSED)) +
-      geom_bar(stat = "identity", width = 1, color = "white") +
-      coord_polar("y") +
-      labs(fill = "Sample Type") +
-      theme_void() +
-      theme(legend.position = "right")
-  })
-  
+  # reused_sample_counts <- reactive({
+  #   fresh_count <- nrow(TB_Adtl[TB_Adtl$REUSED == 1, ])
+  #   reused_count <- nrow(TB_Adtl[TB_Adtl$REUSED > 1, ])
+  #   counts <- data.frame(REUSED = c("Fresh", "Reused"), COUNT = c(fresh_count, reused_count))
+  #   counts
+  # })
+  # 
+  # output$pie_chart <- renderPlot({
+  #   counts <- reused_sample_counts()
+  #   ggplot(counts, aes(x = "", y = COUNT, fill = REUSED)) +
+  #     geom_bar(stat = "identity", width = 1, color = "white") +
+  #     coord_polar("y") +
+  #     labs(fill = "Sample Type") +
+  #     theme_void() +
+  #     theme(legend.position = "right")
+  # })
+  # 
+
   # Check if ID_BL_APOPO has a value and override ID_BL_DOTS
   TB_Adtl$ID_STATUS <- ifelse(!is.na(TB_Adtl$ID_BL_APOPO), TB_Adtl$ID_BL_APOPO, TB_Adtl$ID_BL_DOTS)
   TB_rat$ID_STATUS <- ifelse(!is.na(TB_rat$ID_BL_APOPO), TB_rat$ID_BL_APOPO, TB_rat$ID_BL_DOTS)
@@ -445,7 +447,60 @@ function(input, output, session){
       Specificity_trainer_table_monthly <- rbind(Specificity_trainer_table_monthly, new_row)
     }
   }
+  
+  
+ # Total Program Results
+  # DOTS Positive - Samples
+  TotalDOTSPos <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS != 1)$ID_SAMPLE)
+  # DOTS Positive - Patients
+  TotalDotsPosPatient <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS != 1)$ID_PATIENT)
+  # DOTS Blind - Sample
+  TotalBlindSample <- n_distinct(subset(TB_Adtl, TB_Adtl$STATUS_BLINDPOS == "TRUE")$ID_SAMPLE)
+  # DOTS Blind - Patients
+  TotalBlindPatient <- n_distinct(subset(TB_Adtl, TB_Adtl$STATUS_BLINDPOS == "TRUE")$ID_PATIENT)
+  # DOTS Negative - Samples
+  TotalDotsNegative <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 1)$ID_SAMPLE)
+  # DOTS Negative - Patients
+  TotalDotsNegPatient <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 1)$ID_PATIENT)
+  # DOTS Negative Indicated (Postive samples that are detected as negative?) !
+  TotalNegativeIndicated <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS != 1 & TB_Adtl$RatHit == 0)$ID_SAMPLE)
+  # DOTS Unconfirmed HITS (Negative sample that are detected as positive?) !
+  UnconfirmedNegHit <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 1 & TB_Adtl$RatHit > 0)$ID_SAMPLE)
+  # DOTS Total New Case - Sample
+  TotalNewCase <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0)$ID_SAMPLE)  
+  # DOTS Total New Case - Patients
+  TotalNewCasePatient <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0)$ID_PATIENT)  
+  
+  TotalSampleCase <- TotalDOTSPos + TotalDotsNegative
+  TotalPatientCase <- TotalDotsPosPatient + TotalDotsNegPatient
+  
+  # Create the data for the table
+  overview <- data.frame(
+    Category = c("DOTS Positive", "Blinds", "DOTS Negative", "Neg samples indicated", 
+                 "Unconfirmed HITS", "New Cases", "Avg #Rats HIT New Case", 
+                 "Total Cases", "Increase in detection"),
+    Samples = c(TotalDOTSPos, TotalBlindSample, TotalDotsNegative, TotalNegativeIndicated,
+                UnconfirmedNegHit, TotalNewCase, NA, TotalSampleCase, NA),
+    Patients = c(TotalDotsPosPatient, TotalBlindPatient, TotalDotsNegPatient, NA, NA,
+                 TotalNewCasePatient, NA, TotalPatientCase, NA),
+    Prevalence = c(paste0(round((TotalDOTSPos / TotalSampleCase) * 100, 1), "%"), 
+                   paste0(round((TotalBlindSample / TotalDOTSPos) * 100, 1), "%"), 
+                   paste0(round((TotalDotsNegative / TotalSampleCase) * 100, 1), "%"),
+                   paste0(round((TotalNegativeIndicated / TotalDotsNegative) * 100, 1), "%"), 
+                   paste0(round((UnconfirmedNegHit / TotalNegativeIndicated) * 100, 1), "%"),
+                   paste0(round((TotalNewCase / TotalDotsNegative) * 100, 1), "%"), NA, NA,
+                   paste0(round(( TotalNewCase / TotalDotsPosPatient) * 100, 1), "%"))
+  ) 
 
+  
+  
+  
+  # OVERVIEW table in UI
+  output$resultTable <- renderTable({
+    overview
+  })
+  
+  
   # Render the tables in the UI
   output$Sensitivity_trainer_table_daily <- renderTable({
     Sensitivity_trainer_table_daily

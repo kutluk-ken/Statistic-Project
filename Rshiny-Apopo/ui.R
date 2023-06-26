@@ -36,8 +36,9 @@ ui <- dashboardPage(
   dashboardBody(
     tabItems(
       tabItem("Overview",
-              fluidRow(
-                box(plotOutput("pie_chart"), height = 300)
+              h2("Overview"),
+              tabsetPanel(
+                tabPanel("Total Program Results",tableOutput("resultTable"))
               )
       ),
       tabItem("Rat_Performance",
