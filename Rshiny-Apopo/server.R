@@ -700,11 +700,8 @@ function(input, output, session){
       }
     }
   })
-}
-  ###################### Rat Performance ###########################
-  # Create a Name List without duplication
   unique_rat_names <- sort(unique(TB_rat$RAT_NAME))
-
+  
   
   
   output$ratSelect <- renderUI({
@@ -712,3 +709,15 @@ function(input, output, session){
     selectInput("Rat_Select", "Choose the rat", choices = unique_rat_names)
   })
 }
+
+  ###################### Rat Performance ###########################
+  # Create a Name List without duplication
+#   unique_rat_names <- sort(unique(TB_rat$RAT_NAME))
+# 
+# 
+# 
+#   output$ratSelect <- renderUI({
+#     # Create the selectInput with the dynamically generated choices
+#     selectInput("Rat_Select", "Choose the rat", choices = unique_rat_names)
+#   })
+# }
