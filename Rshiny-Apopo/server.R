@@ -6,7 +6,7 @@
 #
 #    http://shiny.rstudio.com/
 #
-
+library(dplyr)
 library(shiny)
 library(readxl)
 library(ggplot2)
@@ -699,5 +699,16 @@ function(input, output, session){
         plot(Display_Table$Month, Display_Table$Specificity, type = "o", pch = 16, xlab = "Time Period", ylab = "Specificity", main = "Line Chart")
       }
     }
+  })
+}
+  ###################### Rat Performance ###########################
+  # Create a Name List without duplication
+  unique_rat_names <- sort(unique(TB_rat$RAT_NAME))
+
+  
+  
+  output$ratSelect <- renderUI({
+    # Create the selectInput with the dynamically generated choices
+    selectInput("Rat_Select", "Choose the rat", choices = unique_rat_names)
   })
 }

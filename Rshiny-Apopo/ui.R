@@ -24,6 +24,7 @@ ui <- dashboardPage(
     sidebarMenu(
       menuItem("Overview", tabName = "Overview", icon = icon("dashboard")),
       menuItem("Rat Performance", tabName = "Rat_Performance", icon = icon("chart-pie")),
+      menuItem("Rat Visualized Data", tabName = "Rat_Visualized_Data", icon = icon("paw")),
       menuItem("Trainer Analysis", tabName = "Trainer_Analysis", icon = icon("chart-bar")),
       menuItem("Time Control", tabName = "Control_Time_Analysis", icon = icon("clock")),
       menuItem("Reused Analyst", tabName = "Reused_Analyst", icon = icon("recycle")),
@@ -85,6 +86,10 @@ ui <- dashboardPage(
                 tabPanel("Spe", tableOutput("basicInformation_Specificity")),
                 tabPanel("Ind per", plotOutput("Individual_rat_performance"))
               )
+      ),
+      tabItem("Rat_Visualized_Data",
+              h2("Rat Visualized Data"),
+              uiOutput("ratSelect")
       ),
       tabItem("Trainer_Analysis",
               h2("Analysis Trainer by time"),
