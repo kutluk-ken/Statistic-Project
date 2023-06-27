@@ -11,6 +11,7 @@ library(shiny)
 library(readxl)
 library(ggplot2)
 library(DT)
+library(dplyr)
 
 # # Read the data file
 # data <- read_excel("/Users/kutlukanwar/Desktop/STAD94/TBdetectionRats_Tanzania.xlsx", sheet = 3, col_names = TRUE)
@@ -448,8 +449,52 @@ function(input, output, session){
     }
   }
   
+  # Table for sensitivity for blinds sample
+  Sensitivity_blind_table<- data.frame()
+  for (name in unique_names) {
+    # Splitting the wanted subset with specific name
+    # Total Positive samples
+    blind_sample <- subset(TB_rat, RAT_NAME == name & TB_rat$STATUS_BLINDPOS == "TRUE")
+    # Amount of Total Positive samples
+    blind_sample_Amount <- nrow(blind_sample)
+    # HIT == TRUE
+    HITS_sample <- subset(blind_sample, HIT == "TRUE")
+    # Amount of HIT == TRUE
+    HITS_Amount <- nrow(HITS_sample)
+    # Sensitivity
+    Sensitivity_Rat <- HITS_Amount / blind_sample_Amount
+    # Adding to existing table
+    new_row <- data.frame(
+      Rat_Name = name,
+      HIT_True_Blind = HITS_Amount,
+      Total_Amount = blind_sample_Amount,
+      Sensitivity_Blind = Sensitivity_Rat
+    )
+    Sensitivity_blind_table <- rbind(Sensitivity_blind_table, new_row)
+  }
+  
+  # Table for new cases
+  NewCase_table<- data.frame()
+  for (name in unique_names) {
+    
+    new_cases_sample <- subset(TB_rat, RAT_NAME == name & TB_rat$ID_BL_DOTS == 1 & TB_rat$ID_BL_APOPO > 1)
+    # Amount of Total Positive samples
+    new_cases_amount <- nrow(new_cases_sample)
+    # HIT == TRUE
+    HITS_sample <- subset(new_cases_sample, HIT == "TRUE")
+    # Amount of HIT == TRUE
+    HITS_Amount <- nrow(HITS_sample)
+    
+    new_row <- data.frame(
+      Rat_Name = name,
+      HIT_ON_NewCase = HITS_Amount,
+      Total_Amount = new_cases_amount
+    )
+    NewCase_table <- rbind(NewCase_table, new_row)
+  }
   
  # Total Program Results
+  
   # DOTS Positive - Samples
   TotalDOTSPos <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS != 1)$ID_SAMPLE)
   # DOTS Positive - Patients
@@ -474,7 +519,7 @@ function(input, output, session){
   TotalSampleCase <- TotalDOTSPos + TotalDotsNegative
   TotalPatientCase <- TotalDotsPosPatient + TotalDotsNegPatient
   
-  # Create the data for the overview table
+  # Create the data for the overview_TPR table
   overview_TPR <- data.frame(
     Category = c("DOTS Positive", "Blinds", "DOTS Negative", "Neg samples indicated", 
                  "Unconfirmed HITS", "New Cases", "Avg #Rats HIT New Case", 
@@ -493,6 +538,7 @@ function(input, output, session){
   ) 
   
   # Program-Level Sample Details
+  
   TotalDOTSPos3Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 13)$ID_SAMPLE)
   TotalDOTSPos2Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 12)$ID_SAMPLE)
   TotalDOTSPos1Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 11)$ID_SAMPLE)
@@ -506,11 +552,42 @@ function(input, output, session){
   overview_PLSD_DOTs <- data.frame(
     "Bact load" = c("3+", "2+", "1+", "Scanty", "Total"),
     "Total" = c(TotalDOTSPos3Plus, TotalDOTSPos2Plus, TotalDOTSPos1Plus, TotalDOTSPosScanty, TotalDOTSPos),
-    "% Total" = c(round((TotalDOTSPos3Plus / TotalDOTSPos) * 100, 1), 
-                  round((TotalDOTSPos2Plus / TotalDOTSPos) * 100, 1),
-                  round((TotalDOTSPos1Plus / TotalDOTSPos) * 100, 1),
-                  round((TotalDOTSPosScanty / TotalDOTSPos) * 100, 1),
-                  100.0)
+    "Percentage" = c(paste0(round((TotalDOTSPos3Plus / TotalDOTSPos) * 100, 1), "%"),
+                  paste0(round((TotalDOTSPos2Plus / TotalDOTSPos) * 100, 1), "%"),
+                  paste0(round((TotalDOTSPos1Plus / TotalDOTSPos) * 100, 1),"%"),
+                  paste0(round((TotalDOTSPosScanty / TotalDOTSPos) * 100, 1),"%"), paste0(100.0,"%"))
+  ) 
+  overview_PLSD_newcase <- data.frame(
+    "Bact load" = c("3+", "2+", "1+", "Scanty", "Total"),
+    "Total" = c(TotalNewCase3Plus, TotalNewCase2Plus, TotalNewCase1Plus, TotalNewCaseScanty, TotalNewCase),
+    "Percentage" = c(paste0(round((TotalNewCase3Plus / TotalNewCase) * 100, 1), "%"), 
+                  paste0(round((TotalNewCase2Plus / TotalNewCase) * 100, 1), "%"),
+                  paste0(round((TotalNewCase1Plus / TotalNewCase) * 100, 1), "%"),
+                  paste0(round((TotalNewCaseScanty / TotalNewCase) * 100, 1), "%"),
+                  paste0(100.0,"%"))
+  ) 
+  
+  # Average Individual Rat Results
+  TotalRats <- n_distinct(TB_rat$RAT_NAME)
+  # rat_hits <- TB_rat %>%
+  #   filter(HIT == "TRUE", ID_STATUS > 1) %>%
+  #   group_by(RAT_NAME) %>%
+  #   summarize(total_hits = n())
+  Average_Dots_Hits <- mean(Sensitivity_table$HIT_True)
+  Average_Sen <- mean(Sensitivity_table$Sensitivity)
+  Average_Blind_Hit <- mean(Sensitivity_blind_table$HIT_True_Blind)
+  Average_Blind_Sensitivity <- mean(Sensitivity_blind_table$Sensitivity_Blind)
+  Average_Negative_Hits <- mean(Specificity_table$HIT_FALSE)
+  Average_Negative_Specificity <- mean(Specificity_table$Specificity)
+  Average_Hits_NewCase <- mean(NewCase_table$HIT_ON_NewCase)
+  
+  # Construct overview_AIRR data frame
+  overview_AIRR <- data.frame(
+    Total = c("Rats", "DOTS Positive", "Sensitivity", "Blinds", 
+              "Sensitivity", "DOTS Negative", "Specificity", 
+              "New Cases"),
+    Indicated = c(TotalRats, Average_Dots_Hits, Average_Sen, Average_Blind_Hit,
+                  Average_Blind_Sensitivity, Average_Negative_Hits, Average_Negative_Specificity, Average_Hits_NewCase)
   ) 
   
   # Total Program Results table in UI
@@ -522,6 +599,15 @@ function(input, output, session){
   output$PLSD_DOTs <- renderTable({
     overview_PLSD_DOTs
   })
+  
+  output$PLSD_newcase <- renderTable({
+    overview_PLSD_newcase
+  })
+  
+  output$AIRR <- renderTable({
+    overview_AIRR
+  })
+  
   
   # Render the tables in the UI
   output$Sensitivity_trainer_table_daily <- renderTable({

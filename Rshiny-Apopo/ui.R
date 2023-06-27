@@ -37,13 +37,46 @@ ui <- dashboardPage(
     tabItems(
       tabItem("Overview",
               h2("Overview"),
-              tabsetPanel(
-                tabPanel("Total Program Results",tableOutput("TPR"))
-              ),
-              tabsetPanel(
-                tabPanel("Program-Level Sample Details",tableOutput("PLSD_DOTs"))
+              fluidRow(
+                column(width = 3,
+                       h3("Total Program Results"),
+                       div(
+                         style = "overflow-x: auto;",
+                         tableOutput("TPR"),
+                         class = "table-responsive"
+                       )
+                ),
+                column(width = 5,
+                       h3("Program-Level Sample Details"),
+                       fluidRow(
+                         column(width = 4,
+                                h4("DOTS Cases"),
+                                div(
+                                  style = "overflow-x: auto;",
+                                  tableOutput("PLSD_DOTs"),
+                                  class = "table-responsive"
+                                )
+                         ),
+                         column(width = 4,
+                                h4("New Samples"),
+                                div(
+                                  style = "overflow-x: auto;",
+                                  tableOutput("PLSD_newcase"),
+                                  class = "table-responsive"
+                                )
+                         )
+                       )
+                ),
+                column(width = 6,
+                       h3("Average Individual Rat Results"),
+                       div(
+                         style = "overflow-x: auto;",
+                         tableOutput("AIRR"),
+                         class = "table-responsive"
+                       )
+                
               )
-              
+              )
       ),
       tabItem("Rat_Performance",
               h2("Rat Performance Tab Content"),
