@@ -29,7 +29,7 @@ ui <- dashboardPage(
       menuItem("Time Control", tabName = "Control_Time_Analysis", icon = icon("clock")),
       menuItem("Reused Analyst", tabName = "Reused_Analyst", icon = icon("recycle")),
       menuItem("Feedback", tabName = "Feedback", icon = icon("envelope")),
-      menuItem("something1", tabName = "something1", icon = icon("question")),
+      menuItem("Overall Table", tabName = "Overall_Table", icon = icon("file-excel")),
       menuItem("something2", tabName = "something2", icon = icon("recycle")),
       menuItem("something3", tabName = "something3", icon = icon("recycle"))
     )
@@ -119,8 +119,16 @@ ui <- dashboardPage(
       tabItem("Feedback",
               h2("Feedback Tab Content")
       ),
-      tabItem("something1",
-              h2("Reused Tab Content")
+      tabItem("Overall_Table",
+              h2("Overall Table"),
+              fluidRow(
+                column(width = 12,
+                       div(
+                         style = "height:500px; overflow-y: scroll;overflow-x: scroll;",
+                         tableOutput("Overall_table")
+                       )
+                )
+              )
       ),
       tabItem("something2",
               h2("Reused Tab Content")  
