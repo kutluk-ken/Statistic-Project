@@ -6,7 +6,7 @@
 #
 #    http://shiny.rstudio.com/
 #
-library(dplyr)
+
 library(shiny)
 library(readxl)
 library(ggplot2)
@@ -700,24 +700,65 @@ function(input, output, session){
       }
     }
   })
+  ###################### Rat Performance ###########################
   unique_rat_names <- sort(unique(TB_rat$RAT_NAME))
-  
   
   
   output$ratSelect <- renderUI({
     # Create the selectInput with the dynamically generated choices
     selectInput("Rat_Select", "Choose the rat", choices = unique_rat_names)
   })
-}
+  
+  ###################### Overall Table ###########################
+  unique_rat_names <- sort(unique(TB_rat$RAT_NAME))
+  Overall_table<- data.frame()
+  # we have level from 0 to 24
+  bacterial_level <- seq(0, 24)
+  # Loop over all rats' name
+  for (name in unique_rat_names) {
+    for (SampleReuse in c("ALL", "FRESH", "RE-USED")){
+      # Create a row
+      new_row <- data.frame(
+        Rat_Name = name,
+        SampleReuse = SampleReuse
+      )
+      
+      if (SampleReuse == "ALL"){
+        Sample_Reuse_Subset <- TB_rat
+      } else if (SampleReuse == "FRESH"){
+        Sample_Reuse_Subset <- subset(TB_rat, TB_rat$REUSED == 1)
+      } else {
+        Sample_Reuse_Subset <- subset(TB_rat, TB_rat$REUSED != 1)
+      }
+      
+      
+      # Splitting the wanted subset with specific name
+      # Loop over all levels
+      for (level in bacterial_level){
+        Rat_level <- subset(Sample_Reuse_Subset, Sample_Reuse_Subset$RAT_NAME == name & Sample_Reuse_Subset$ID_STATUS == level)
+        # Amount of this level
+        Amount <- nrow(Rat_level)
+        # Column bind
+        new_row <- cbind(new_row, Amount)
+      }
+      # Adding to existing table
+      Overall_table <- rbind(Overall_table, new_row)
+    }
+  }
+  colnames(Overall_table) <- c("RAT_NAME", "SampleReuse", "UBL(0)", "Negative(1)",
+                               "1 AFB(2)", "2 AFB(3)", "3 AFB(4)", "4 AFB(5)",
+                               "5 AFB(6)", "6 AFB(7)", "7 AFB(8)", "8 AFB(9)",
+                               "9 AFB(10)", "1+(11)", "2+(12)", "3+(13)",
+                               " (14)", "10 AFB(15)", "11 AFB(16)", "12 AFB(17)",
+                               "13 AFB(18)", "14 AFB(19)", "15 AFB(20)",
+                               "16 AFB(21)", "17 AFB(22)", "18 AFB(23)",
+                               "19 AFB(24)")
+  
+  # Render the tables in the UI
+  output$Overall_table <- renderTable({
+    Overall_table
+  })
 
-  ###################### Rat Performance ###########################
-  # Create a Name List without duplication
-#   unique_rat_names <- sort(unique(TB_rat$RAT_NAME))
-# 
-# 
-# 
-#   output$ratSelect <- renderUI({
-#     # Create the selectInput with the dynamically generated choices
-#     selectInput("Rat_Select", "Choose the rat", choices = unique_rat_names)
-#   })
-# }
+  
+# Server end mark
+}
