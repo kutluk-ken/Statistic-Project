@@ -734,15 +734,34 @@ function(input, output, session){
       
       # Splitting the wanted subset with specific name
       # Loop over all levels
-      for (level in bacterial_level){
-        Rat_level <- subset(Sample_Reuse_Subset, Sample_Reuse_Subset$RAT_NAME == name & Sample_Reuse_Subset$ID_STATUS == level)
-        # Amount of this level
-        Amount <- nrow(Rat_level)
-        # Column bind
-        new_row <- cbind(new_row, Amount)
-      }
+        for (level in bacterial_level){
+          Rat_level <- subset(Sample_Reuse_Subset, Sample_Reuse_Subset$RAT_NAME == name & Sample_Reuse_Subset$ID_STATUS == level)
+          # Amount of this level
+          Amount <- nrow(Rat_level)
+          # Column bind
+          new_row <- cbind(new_row, Amount)
+        }
+      
+      # Add sensitivity column
+      pos_sample <- subset(Sample_Reuse_Subset, RAT_NAME == name & Sample_Reuse_Subset$ID_STATUS != 1)
+      pos_amount <- nrow(pos_sample)
+      hits_amount <- nrow(subset(pos_sample, HIT == "TRUE"))
+      sensitivity <- hits_amount/pos_amount
+      new_row <- cbind(new_row, sensitivity)
+      
+      # Add total new case
+      newcase_sample <- subset(Sample_Reuse_Subset, RAT_NAME == name & Sample_Reuse_Subset$ID_BL_DOTS == 1 & Sample_Reuse_Subset$ID_BL_APOPO > 1) # Check the definition of new case!!!
+      newcases_amount <- nrow(newcase_sample)
+      new_row <- cbind(new_row, newcases_amount)
+      
+      # Add detected new case
+      newcase_detected <- subset(newcase_sample, HIT == "TRUE")
+      newcasesdetected_amount <- nrow(newcase_detected)
+      new_row <- cbind(new_row, newcasesdetected_amount)
+      
       # Adding to existing table
       Overall_table <- rbind(Overall_table, new_row)
+      
     }
   }
   colnames(Overall_table) <- c("RAT_NAME", "SampleReuse", "UBL(0)", "Negative(1)",
@@ -752,7 +771,7 @@ function(input, output, session){
                                " (14)", "10 AFB(15)", "11 AFB(16)", "12 AFB(17)",
                                "13 AFB(18)", "14 AFB(19)", "15 AFB(20)",
                                "16 AFB(21)", "17 AFB(22)", "18 AFB(23)",
-                               "19 AFB(24)")
+                               "19 AFB(24)", "Sensitivity","Total New case", "New Case Found")
   
   # Render the tables in the UI
   output$Overall_table <- renderTable({
