@@ -23,6 +23,7 @@ ui <- dashboardPage(
   dashboardSidebar(
     sidebarMenu(
       menuItem("Overview", tabName = "Overview", icon = icon("dashboard")),
+      menuItem("Rat Hit Analyst", tabName = "Rat_Hit_Analyst", icon = icon("chart-pie")),
       menuItem("Rat Performance", tabName = "Rat_Performance", icon = icon("chart-pie")),
       menuItem("Rat Visualized Data", tabName = "Rat_Visualized_Data", icon = icon("paw")),
       menuItem("Trainer Analysis", tabName = "Trainer_Analysis", icon = icon("chart-bar")),
@@ -77,6 +78,23 @@ ui <- dashboardPage(
                        )
                 
               )
+              )
+      ),
+      tabItem("Rat_Hit_Analyst",
+                h2("Rat Hit Analyst"),
+                fluidRow(
+                  box(
+                    title = "Select Rat and Sample Reuse",
+                    selectInput("rat", "Select Rat Name", choices = unique(Overall_table$RAT_NAME)),
+                    selectInput("sample_reuse", "Select Sample Reuse:",
+                                choices = c("ALL", "FRESH", "RE-USED"))
+                  )
+                ),
+              fluidRow(
+                box(
+                  title = "Bar Chart",
+                  plotOutput("barplot")
+                )
               )
       ),
       tabItem("Rat_Performance",

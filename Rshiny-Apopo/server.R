@@ -777,6 +777,15 @@ function(input, output, session){
   output$Overall_table <- renderTable({
     Overall_table
   })
+  
+  # Rat Hit Analysis
+  output$barplot <- renderPlot({
+    rat_df <- Overall_table[Overall_table$RAT_NAME == input$rat & Overall_table$SampleReuse == input$sample_reuse, ] # Subset data for the selected rat
+    rat_hits <- as.numeric(unlist(rat_df[, 5:24]))  # Exclude RatName column and convert to numeric
+    barplot(rat_hits, names.arg = colnames(rat_df[, 5:24]),
+            xlab = "Bacterial Level", ylab = "Number of Hits",
+            main = paste("Rat:", input$rat, " - Sample Reuse:", input$sample_reuse))
+  })
 
   
 # Server end mark
