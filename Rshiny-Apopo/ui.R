@@ -84,18 +84,30 @@ ui <- dashboardPage(
                 h2("Rat Hit Analyst"),
                 fluidRow(
                   box(
-                    title = "Select Rat and Sample Reuse",
-                    selectInput("rat", "Select Rat Name", choices = unique(Overall_table$RAT_NAME)),
-                    selectInput("sample_reuse", "Select Sample Reuse:",
-                                choices = c("ALL", "FRESH", "RE-USED"))
+                    uiOutput("ratHitAnalystInputs")
                   )
                 ),
-              fluidRow(
-                box(
-                  title = "Bar Chart",
-                  plotOutput("barplot")
+                fluidRow(
+                  column(
+                    width = 12,
+                    box(
+                      title = "Relative data",
+                      style = "height:500px; overflow-y: scroll;overflow-x: scroll;",
+                      h4("Sample Number as chosen"),
+                      tableOutput("Selected_Bac_Level"),
+                      h4("Total Hits as chosen"),
+                      tableOutput("Selected_Hits"),
+                      h4("Percentage as chosen (in %)"),
+                      tableOutput("Selected_Percentage")
+                    )
+                  )
+                ),
+                fluidRow(
+                  box(
+                    title = "Bar Chart",
+                    plotOutput("barplot")
+                  )
                 )
-              )
       ),
       tabItem("Rat_Performance",
               h2("Rat Performance Tab Content"),
@@ -139,12 +151,36 @@ ui <- dashboardPage(
       ),
       tabItem("Overall_Table",
               h2("Overall Table"),
-              fluidRow(
-                column(width = 12,
-                       div(
-                         style = "height:500px; overflow-y: scroll;overflow-x: scroll;",
-                         tableOutput("Overall_table")
-                       )
+              tabsetPanel(
+                tabPanel("bac_level",
+                  fluidRow(
+                    column(width = 12,
+                           div(
+                             style = "height:500px; overflow-y: scroll;overflow-x: scroll;",
+                             tableOutput("BacterialLevelTable")
+                           )
+                    )
+                  )
+                ),
+                tabPanel("Hit",
+                         fluidRow(
+                           column(width = 12,
+                                  div(
+                                    style = "height:500px; overflow-y: scroll;overflow-x: scroll;",
+                                    tableOutput("HitTable")
+                                  )
+                           )
+                         )
+                ),
+                tabPanel("Pct.(%)",
+                         fluidRow(
+                           column(width = 12,
+                                  div(
+                                    style = "height:500px; overflow-y: scroll;overflow-x: scroll;",
+                                    tableOutput("PercentageTable")
+                                  )
+                           )
+                         )
                 )
               )
       ),
