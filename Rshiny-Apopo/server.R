@@ -710,15 +710,27 @@ function(input, output, session){
   })
   
   ###################### Overall Table ###########################
+  
+  ############## table ##################
   unique_rat_names <- sort(unique(TB_rat$RAT_NAME))
-  Overall_table<- data.frame()
+  BacterialLevelTable<- data.frame()
+  HitTable<- data.frame()
+  PercentageTable<- data.frame()
   # we have level from 0 to 24
   bacterial_level <- seq(0, 24)
   # Loop over all rats' name
   for (name in unique_rat_names) {
     for (SampleReuse in c("ALL", "FRESH", "RE-USED")){
       # Create a row
-      new_row <- data.frame(
+      new_row_total <- data.frame(
+        Rat_Name = name,
+        SampleReuse = SampleReuse
+      )
+      new_row_hit <- data.frame(
+        Rat_Name = name,
+        SampleReuse = SampleReuse
+      )
+      new_row_percentage <- data.frame(
         Rat_Name = name,
         SampleReuse = SampleReuse
       )
@@ -735,36 +747,50 @@ function(input, output, session){
       # Splitting the wanted subset with specific name
       # Loop over all levels
         for (level in bacterial_level){
-          Rat_level <- subset(Sample_Reuse_Subset, Sample_Reuse_Subset$RAT_NAME == name & Sample_Reuse_Subset$ID_STATUS == level)
+          # Find the amount of total sample
+          Rat_level_total <- subset(Sample_Reuse_Subset, RAT_NAME == name & ID_STATUS == level)
+          # Find the amount of hit sample
+          Rat_level_hit <- subset(Sample_Reuse_Subset, RAT_NAME == name & ID_STATUS == level & HIT == "TRUE")
           # Amount of this level
-          Amount <- nrow(Rat_level)
+          Amount_total <- nrow(Rat_level_total)
+          Amount_hit <- nrow(Rat_level_hit)
+          Amount_percentage <- Amount_hit * 100/ (Amount_total + 0.00000001)
           # Column bind
-          new_row <- cbind(new_row, Amount)
+          new_row_total <- cbind(new_row_total, Amount_total)
+          new_row_hit <- cbind(new_row_hit, Amount_hit)
+          new_row_percentage <- cbind(new_row_percentage, Amount_percentage)
         }
       
       # Add sensitivity column
-      pos_sample <- subset(Sample_Reuse_Subset, RAT_NAME == name & Sample_Reuse_Subset$ID_STATUS != 1)
+      pos_sample <- subset(Sample_Reuse_Subset, RAT_NAME == name & ID_STATUS != 1)
       pos_amount <- nrow(pos_sample)
       hits_amount <- nrow(subset(pos_sample, HIT == "TRUE"))
       sensitivity <- hits_amount/pos_amount
-      new_row <- cbind(new_row, sensitivity)
+      new_row_total <- cbind(new_row_total, sensitivity)
+      new_row_hit <- cbind(new_row_hit, sensitivity)
+      new_row_percentage <- cbind(new_row_percentage, sensitivity)
       
       # Add total new case
-      newcase_sample <- subset(Sample_Reuse_Subset, RAT_NAME == name & Sample_Reuse_Subset$ID_BL_DOTS == 1 & Sample_Reuse_Subset$ID_BL_APOPO > 1) # Check the definition of new case!!!
+      newcase_sample <- subset(Sample_Reuse_Subset, RAT_NAME == name & ID_BL_DOTS == 1 & ID_BL_APOPO > 1) # Check the definition of new case!!!
       newcases_amount <- nrow(newcase_sample)
-      new_row <- cbind(new_row, newcases_amount)
+      new_row_total <- cbind(new_row_total, newcases_amount)
+      new_row_hit <- cbind(new_row_hit, newcases_amount)
+      new_row_percentage <- cbind(new_row_percentage, newcases_amount)
       
       # Add detected new case
       newcase_detected <- subset(newcase_sample, HIT == "TRUE")
       newcasesdetected_amount <- nrow(newcase_detected)
-      new_row <- cbind(new_row, newcasesdetected_amount)
+      new_row_total <- cbind(new_row_total, newcasesdetected_amount)
+      new_row_hit <- cbind(new_row_hit, newcasesdetected_amount)
+      new_row_percentage <- cbind(new_row_percentage, newcasesdetected_amount)
       
       # Adding to existing table
-      Overall_table <- rbind(Overall_table, new_row)
-      
+      BacterialLevelTable <- rbind(BacterialLevelTable, new_row_total)
+      HitTable <- rbind(HitTable, new_row_hit)
+      PercentageTable <- rbind(PercentageTable, new_row_percentage)
     }
   }
-  colnames(Overall_table) <- c("RAT_NAME", "SampleReuse", "UBL(0)", "Negative(1)",
+  colnames(BacterialLevelTable) <- c("RAT_NAME", "SampleReuse", "UBL(0)", "Negative(1)",
                                "1 AFB(2)", "2 AFB(3)", "3 AFB(4)", "4 AFB(5)",
                                "5 AFB(6)", "6 AFB(7)", "7 AFB(8)", "8 AFB(9)",
                                "9 AFB(10)", "1+(11)", "2+(12)", "3+(13)",
@@ -774,19 +800,78 @@ function(input, output, session){
                                "19 AFB(24)", "Sensitivity","Total New case", "New Case Found")
   
   # Render the tables in the UI
-  output$Overall_table <- renderTable({
-    Overall_table
+  output$BacterialLevelTable <- renderTable({
+    BacterialLevelTable
   })
   
+  colnames(HitTable) <- c("RAT_NAME", "SampleReuse", "UBL(0)", "Negative(1)",
+                                     "1 AFB(2)", "2 AFB(3)", "3 AFB(4)", "4 AFB(5)",
+                                     "5 AFB(6)", "6 AFB(7)", "7 AFB(8)", "8 AFB(9)",
+                                     "9 AFB(10)", "1+(11)", "2+(12)", "3+(13)",
+                                     " (14)", "10 AFB(15)", "11 AFB(16)", "12 AFB(17)",
+                                     "13 AFB(18)", "14 AFB(19)", "15 AFB(20)",
+                                     "16 AFB(21)", "17 AFB(22)", "18 AFB(23)",
+                                     "19 AFB(24)", "Sensitivity","Total New case", "New Case Found")
+  
+  # Render the tables in the UI
+  output$HitTable <- renderTable({
+    HitTable
+  })
+  
+  colnames(PercentageTable) <- c("RAT_NAME", "SampleReuse", "UBL(0)", "Negative(1)",
+                          "1 AFB(2)", "2 AFB(3)", "3 AFB(4)", "4 AFB(5)",
+                          "5 AFB(6)", "6 AFB(7)", "7 AFB(8)", "8 AFB(9)",
+                          "9 AFB(10)", "1+(11)", "2+(12)", "3+(13)",
+                          " (14)", "10 AFB(15)", "11 AFB(16)", "12 AFB(17)",
+                          "13 AFB(18)", "14 AFB(19)", "15 AFB(20)",
+                          "16 AFB(21)", "17 AFB(22)", "18 AFB(23)",
+                          "19 AFB(24)", "Sensitivity","Total New case", "New Case Found")
+  
+  # Render the tables in the UI
+  output$PercentageTable <- renderTable({
+    PercentageTable
+  })
+
+  # Render the rat hit Analyst in the UI
+  output$ratHitAnalystInputs <- renderUI({
+    fluidRow(
+      box(
+        title = "Select Rat and Sample Reuse",
+        selectInput("rat", "Select Rat Name", choices = unique(HitTable$RAT_NAME)),
+        selectInput("sample_reuse", "Select Sample Reuse:",
+                    choices = c("ALL", "FRESH", "RE-USED"))
+      )
+    )
+  })
+
   # Rat Hit Analysis
   output$barplot <- renderPlot({
-    rat_df <- Overall_table[Overall_table$RAT_NAME == input$rat & Overall_table$SampleReuse == input$sample_reuse, ] # Subset data for the selected rat
+    rat_df <- HitTable[HitTable$RAT_NAME == input$rat & HitTable$SampleReuse == input$sample_reuse, ] # Subset data for the selected rat
     rat_hits <- as.numeric(unlist(rat_df[, 5:24]))  # Exclude RatName column and convert to numeric
     barplot(rat_hits, names.arg = colnames(rat_df[, 5:24]),
             xlab = "Bacterial Level", ylab = "Number of Hits",
             main = paste("Rat:", input$rat, " - Sample Reuse:", input$sample_reuse))
   })
 
+  ############## Connection of two tables ##################
+
+  # Render the tables in the UI
+  output$Selected_Bac_Level <- renderTable({
+    Selected_Bac_Level <- subset(BacterialLevelTable, RAT_NAME == input$rat & SampleReuse == input$sample_reuse)
+    Selected_Bac_Level
+  })
+  
+  # Render the tables in the UI
+  output$Selected_Hits <- renderTable({
+    Selected_Hits <- subset(HitTable, RAT_NAME == input$rat & SampleReuse == input$sample_reuse)
+    Selected_Hits
+  })
+  
+  # Render the tables in the UI
+  output$Selected_Percentage <- renderTable({
+    Selected_Percentage <- subset(PercentageTable, RAT_NAME == input$rat & SampleReuse == input$sample_reuse)
+    Selected_Percentage
+  })
   
 # Server end mark
 }
