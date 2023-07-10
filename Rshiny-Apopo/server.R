@@ -57,7 +57,7 @@ function(input, output, session){
   # Create a Name List without duplication
   unique_names <- unique(TB_rat$RAT_NAME)
   
-  # Creating a table showing Sensitivity
+  # Creating a table showing Sensitivity  - all (Including Dots and Apopo)
   Sensitivity_table <- data.frame()
   
   # Loop over all rats' name
@@ -83,7 +83,36 @@ function(input, output, session){
     Sensitivity_table <- rbind(Sensitivity_table, new_row)
   }
   
-  # Creating a table showing Sensitivity
+  # Creating a table showing Sensitivity - Dots
+  unique_names <- unique(TB_rat$RAT_NAME)
+  
+  # Creating a table showing Sensitivity  - all (Including Dots and Apopo)
+  Sensitivity_table_Dots <- data.frame()
+  
+  # Loop over all rats' name
+  for (name in unique_names) {
+    # Splitting the wanted subset with specific name
+    # Total Positive samples
+    Pos_sample <- subset(TB_rat, RAT_NAME == name & TB_rat$ID_BL_DOTS != 1)
+    # Amount of Total Positive samples
+    Pos_Amount <- nrow(Pos_sample)
+    # HIT == TRUE
+    HITS_sample <- subset(Pos_sample, HIT == "TRUE")
+    # Amount of HIT == TRUE
+    HITS_Amount <- nrow(HITS_sample)
+    # Sensitivity
+    Sensitivity_Rat <- HITS_Amount / Pos_Amount
+    # Adding to existing table
+    new_row <- data.frame(
+      Rat_Name = name,
+      HIT_True = HITS_Amount,
+      Total_Amount = Pos_Amount,
+      Sensitivity = Sensitivity_Rat
+    )
+    Sensitivity_table_Dots <- rbind(Sensitivity_table_Dots, new_row)
+  }
+  
+  # Creating a table showing Sensitivity - All
   Specificity_table <- data.frame()
   
   # Loop over all rats' name
@@ -107,6 +136,32 @@ function(input, output, session){
       Specificity = Specificity_Rat
     )
     Specificity_table <- rbind(Specificity_table, new_row)
+  }
+  
+  # Creating a table showing Sensitivity - Dots
+  Specificity_table_Dots <- data.frame()
+  
+  # Loop over all rats' name
+  for (name in unique_names) {
+    # Splitting the wanted subset with specific name
+    # Total Negative samples
+    Neg_sample <- subset(TB_rat, RAT_NAME == name & TB_rat$ID_BL_DOTS == 1)
+    # Amount of Total Negative samples
+    Neg_Amount <- nrow(Neg_sample)
+    # HIT == FALSE
+    HITS_sample <- subset(Neg_sample, HIT == "FALSE")
+    # Amount of HIT == FALSE
+    HITS_Amount <- nrow(HITS_sample)
+    # Specificity
+    Specificity_Rat <- HITS_Amount / Neg_Amount
+    # Adding to existing table
+    new_row <- data.frame(
+      Rat_Name = name,
+      HIT_FALSE = HITS_Amount,
+      Total_Amount = Neg_Amount,
+      Specificity = Specificity_Rat
+    )
+    Specificity_table_Dots <- rbind(Specificity_table_Dots, new_row)
   }
   
   # Render the tables in the UI
@@ -451,6 +506,7 @@ function(input, output, session){
   
   # Table for sensitivity for blinds sample
   Sensitivity_blind_table<- data.frame()
+  unique_names <- unique(TB_rat$RAT_NAME)
   for (name in unique_names) {
     # Splitting the wanted subset with specific name
     # Total Positive samples
@@ -475,6 +531,7 @@ function(input, output, session){
   
   # Table for new cases
   NewCase_table<- data.frame()
+  unique_names <- unique(TB_rat$RAT_NAME)
   for (name in unique_names) {
     
     new_cases_sample <- subset(TB_rat, RAT_NAME == name & TB_rat$ID_BL_DOTS == 1 & TB_rat$ID_BL_APOPO > 1)
@@ -496,21 +553,21 @@ function(input, output, session){
  # Total Program Results
   
   # DOTS Positive - Samples
-  TotalDOTSPos <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS != 1)$ID_SAMPLE)
+  TotalDOTSPos <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS != 1)$ID_SAMPLE)
   # DOTS Positive - Patients
-  TotalDotsPosPatient <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS != 1)$ID_PATIENT)
+  TotalDotsPosPatient <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS != 1)$ID_PATIENT)
   # DOTS Blind - Sample
   TotalBlindSample <- n_distinct(subset(TB_Adtl, TB_Adtl$STATUS_BLINDPOS == "TRUE")$ID_SAMPLE)
   # DOTS Blind - Patients
   TotalBlindPatient <- n_distinct(subset(TB_Adtl, TB_Adtl$STATUS_BLINDPOS == "TRUE")$ID_PATIENT)
   # DOTS Negative - Samples
-  TotalDotsNegative <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 1)$ID_SAMPLE)
+  TotalDotsNegative <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1)$ID_SAMPLE)
   # DOTS Negative - Patients
-  TotalDotsNegPatient <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 1)$ID_PATIENT)
+  TotalDotsNegPatient <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1)$ID_PATIENT)
   # DOTS Negative Indicated (Postive samples that are detected as negative?) !
-  TotalNegativeIndicated <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS != 1 & TB_Adtl$RatHit == 0)$ID_SAMPLE)
+  TotalNegativeIndicated <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$RatHit > 0)$ID_SAMPLE) #Changed TB_Adtl$RatHit to >0.
   # DOTS Unconfirmed HITS (Negative sample that are detected as positive?) !
-  UnconfirmedNegHit <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 1 & TB_Adtl$RatHit > 0)$ID_SAMPLE)
+  UnconfirmedNegHit <- n_distinct(subset(TB_Adtl, TB_Adtl$RatHit > 0 & TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO == 1)$ID_SAMPLE)
   # DOTS Total New Case - Sample
   TotalNewCase <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 1)$ID_SAMPLE)  
   # DOTS Total New Case - Patients
@@ -520,6 +577,7 @@ function(input, output, session){
   TotalPatientCase <- TotalDotsPosPatient + TotalDotsNegPatient
   
   # Create the data for the overview_TPR table
+  
   overview_TPR <- data.frame(
     Category = c("DOTS Positive", "Blinds", "DOTS Negative", "Neg samples indicated", 
                  "Unconfirmed HITS", "New Cases", "Avg #Rats HIT New Case", 
@@ -538,10 +596,9 @@ function(input, output, session){
   ) 
   
   # Program-Level Sample Details
-  
-  TotalDOTSPos3Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 13)$ID_SAMPLE)
-  TotalDOTSPos2Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 12)$ID_SAMPLE)
-  TotalDOTSPos1Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_STATUS == 11)$ID_SAMPLE)
+  TotalDOTSPos3Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 13)$ID_SAMPLE)
+  TotalDOTSPos2Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 12)$ID_SAMPLE)
+  TotalDOTSPos1Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 11)$ID_SAMPLE)
   TotalNewCase1Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 11)$ID_SAMPLE)  
   TotalNewCase2Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 12)$ID_SAMPLE)  
   TotalNewCase3Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 13)$ID_SAMPLE)  
@@ -573,22 +630,136 @@ function(input, output, session){
   #   filter(HIT == "TRUE", ID_STATUS > 1) %>%
   #   group_by(RAT_NAME) %>%
   #   summarize(total_hits = n())
-  Average_Dots_Hits <- mean(Sensitivity_table$HIT_True)
-  Average_Sen <- mean(Sensitivity_table$Sensitivity)
+  Average_Dots_Hits <- mean(Sensitivity_table_Dots$HIT_True)
+  SD_Dots_Hits <- sd(Sensitivity_table_Dots$HIT_True)
+  
+  Average_Sen <- mean(Sensitivity_table_Dots$Sensitivity)
+  SD_Average_Sen <- sd(Sensitivity_table_Dots$Sensitivity)
+  
   Average_Blind_Hit <- mean(Sensitivity_blind_table$HIT_True_Blind)
+  SD_Blind_Hit <- sd(Sensitivity_blind_table$HIT_True_Blind)
+  
   Average_Blind_Sensitivity <- mean(Sensitivity_blind_table$Sensitivity_Blind)
-  Average_Negative_Hits <- mean(Specificity_table$HIT_FALSE)
-  Average_Negative_Specificity <- mean(Specificity_table$Specificity)
+  SD_Blind_Sensitivity <- sd(Sensitivity_blind_table$Sensitivity_Blind)
+  
+  Average_Negative_Hits <- mean(Specificity_table_Dots$HIT_FALSE)
+  SD_Negative_Hits <- sd(Specificity_table_Dots$HIT_FALSE)
+  
+  Average_Negative_Specificity <- mean(Specificity_table_Dots$Specificity)
+  SD_Negative_Specificity <- sd(Specificity_table_Dots$Specificity)
+  
   Average_Hits_NewCase <- mean(NewCase_table$HIT_ON_NewCase)
+  SD_Hits_NewCase <- sd(NewCase_table$HIT_ON_NewCase)
   
   # Construct overview_AIRR data frame
   overview_AIRR <- data.frame(
     Total = c("Rats", "DOTS Positive", "Sensitivity", "Blinds", 
-              "Sensitivity", "DOTS Negative", "Specificity", 
+              "Sensitivity-Blinds", "DOTS Negative", "Specificity", 
               "New Cases"),
-    Indicated = c(TotalRats, Average_Dots_Hits, Average_Sen, Average_Blind_Hit,
-                  Average_Blind_Sensitivity, Average_Negative_Hits, Average_Negative_Specificity, Average_Hits_NewCase)
+    Indicated = c(TotalRats, round(Average_Dots_Hits,2), paste0(round(Average_Sen*100,1),'%'), round(Average_Blind_Hit,2),
+                  paste0(round(Average_Blind_Sensitivity*100,1),'%'), round(Average_Negative_Hits,2),
+                  paste0(round((Average_Negative_Specificity) * 100, 1), "%"), 
+                  round(Average_Hits_NewCase,2)
+                  ),
+    SD = c("", round(SD_Dots_Hits,2), round(SD_Average_Sen,2), round(SD_Blind_Hit,2)
+           , round(SD_Blind_Sensitivity,2), round(SD_Negative_Hits,2),
+           round(SD_Negative_Specificity,2), round(SD_Hits_NewCase,2))
   ) 
+  
+  # Average Rat Sample Details 
+  
+  # DOTs cases
+  total3plusHit <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 13 &
+                                       TB_Adtl$RatHit > 0)$ID_SAMPLE)
+  total2plusHit <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 12 &
+                                       TB_Adtl$RatHit > 0)$ID_SAMPLE)
+  total1plusHit <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 11 &
+                                       TB_Adtl$RatHit > 0)$ID_SAMPLE)
+  totalScantyHit <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS != 11 &
+                                        TB_Adtl$ID_BL_DOTS != 12 &
+                                        TB_Adtl$ID_BL_DOTS != 13 &
+                                        TB_Adtl$ID_BL_DOTS != 1 &
+                                        TB_Adtl$ID_BL_DOTS != 0 &
+                                        TB_Adtl$RatHit > 0)$ID_SAMPLE)
+  # %HIT
+  percentage3plusHit <- total3plusHit/TotalDOTSPos3Plus
+  percentage2plusHit <- total2plusHit/TotalDOTSPos2Plus
+  percentage1plusHit <- total1plusHit/TotalDOTSPos1Plus
+  percentageScantyHit <- totalScantyHit/TotalDOTSPosScanty
+  
+  # 3+,2+,1+,Scanty
+  total123plusScantyHit <- total3plusHit + total2plusHit 
+  + total2plusHit+ totalScantyHit
+  
+  # %Total
+  percentage3plus <- TotalDOTSPos3Plus/TotalDOTSPos
+  percentage2plus <- TotalDOTSPos2Plus/TotalDOTSPos
+  percentage1plus <- TotalDOTSPos1Plus/TotalDOTSPos
+  percentageScanty <- TotalDOTSPosScanty/TotalDOTSPos
+  
+  
+  # NEW cases
+  TotalNewCase3PlushHit <- n_distinct(subset(TB_Adtl, 
+                                             (TB_Adtl$ID_BL_DOTS == 1 
+                                              & TB_Adtl$ID_BL_APOPO > 0)
+                                             & TB_Adtl$ID_STATUS == 13
+                                             & TB_Adtl$RatHit > 0)$ID_SAMPLE)  
+  TotalNewCase2PlushHit <- n_distinct(subset(TB_Adtl, 
+                                             (TB_Adtl$ID_BL_DOTS == 1 
+                                              & TB_Adtl$ID_BL_APOPO > 0)
+                                             & TB_Adtl$ID_STATUS == 12
+                                             & TB_Adtl$RatHit > 0)$ID_SAMPLE) 
+  TotalNewCase1PlushHit <- n_distinct(subset(TB_Adtl, 
+                                             (TB_Adtl$ID_BL_DOTS == 1 
+                                              & TB_Adtl$ID_BL_APOPO > 0)
+                                             & TB_Adtl$ID_STATUS == 11
+                                             & TB_Adtl$RatHit > 0)$ID_SAMPLE)
+  
+  TotalScantyHit_Newcase <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS != 11 &
+                                                TB_Adtl$ID_BL_DOTS != 12 &
+                                                TB_Adtl$ID_BL_DOTS != 13 &
+                                                TB_Adtl$ID_BL_DOTS == 1 &
+                                                TB_Adtl$ID_BL_APOPO > 0 &
+                                                TB_Adtl$RatHit > 0)$ID_SAMPLE)
+  
+  # %Hit
+  percentage3plusHit_NewCase <- TotalNewCase3PlushHit/TotalNewCase3Plus
+  percentage2plusHit_NewCase <- TotalNewCase2PlushHit/TotalNewCase2Plus
+  percentage1plusHit_NewCase <- TotalNewCase1PlushHit/TotalNewCase1Plus
+  percentageScanty_NewCase <- TotalScantyHit_Newcase/ TotalNewCaseScanty
+  
+  # 3+,2+,1+,Scanty - New sample
+  total123plusScantyHit_Newcase <- TotalNewCase3PlushHit + TotalNewCase2PlushHit
+  + TotalNewCase1PlushHit + TotalScantyHit_Newcase
+  # %Total
+  percentage3plus_Newcase <- TotalNewCase3Plus/TotalNewCase
+  percentage2plus_Newcase <- TotalNewCase2Plus/TotalNewCase
+  percentage1plus_Newcase <- TotalNewCase1Plus/TotalNewCase
+  percentageScanty_Newcase <- TotalNewCaseScanty/TotalNewCase
+  
+  #  Create the data for the Average Rat Sample Details table
+  overview_ARSD_Dots <- data.frame(
+    "Bact load" = c("3+", "2+", "1+", "Scanty", "Samples"),
+    "Percentage HIT" = c(percentage3plusHit, percentage2plusHit, percentage1plusHit,
+                percentageScantyHit, total123plusScantyHit),
+    "Percentage Total" = c(paste0(round(percentage3plus * 100, 1), "%"),
+                  paste0(round(percentage2plus * 100, 1), "%"),
+                  paste0(round(percentage1plus * 100, 1),"%"),
+                  paste0(round(percentageScanty * 100, 1),"%"),
+                  paste0(100.0,"%"))
+  )
+  overview_ARSD_Newcase <- data.frame(
+    "Bact load" = c("3+", "2+", "1+", "Scanty", "Samples"),
+    "Percentage HIT" = c(percentage3plusHit_NewCase, percentage2plusHit_NewCase,
+                percentage1plusHit_NewCase,percentageScanty_NewCase,
+                total123plusScantyHit_Newcase),
+    "Percentage Total" = c(paste0(round(percentage3plus_Newcase * 100, 1), "%"), 
+                     paste0(round(percentage2plus_Newcase * 100, 1), "%"),
+                     paste0(round(percentage1plus_Newcase * 100, 1), "%"),
+                     paste0(round(percentageScanty * 100, 1), "%"),
+                     paste0(100.0,"%"))
+  ) 
+  
   
   # Total Program Results table in UI
   output$TPR <- renderTable({
@@ -606,6 +777,13 @@ function(input, output, session){
   
   output$AIRR <- renderTable({
     overview_AIRR
+  })
+  
+  output$ARSD_DOTs <- renderTable({
+    overview_ARSD_Dots
+  })
+  output$ARSD_newcase <- renderTable({
+    overview_ARSD_Newcase
   })
   
   

@@ -43,41 +43,77 @@ ui <- dashboardPage(
                 column(width = 3,
                        h3("Total Program Results"),
                        div(
-                         style = "overflow-x: auto;",
+                         style = "overflow-x: auto; max-height: 600px;",
                          tableOutput("TPR"),
                          class = "table-responsive"
                        )
                 ),
-                column(width = 5,
-                       h3("Program-Level Sample Details"),
+                column(width = 9,
                        fluidRow(
-                         column(width = 4,
-                                h4("DOTS Cases"),
+                         column(width = 6,
+                                h3("Program-Level Sample Details"),
                                 div(
-                                  style = "overflow-x: auto;",
-                                  tableOutput("PLSD_DOTs"),
-                                  class = "table-responsive"
+                                  style = "overflow-x: auto; max-height: 600px;",
+                                  fluidRow(
+                                    column(width = 12,
+                                           h4("DOTS Cases"),
+                                           div(
+                                             style = "overflow-x: auto;",
+                                             tableOutput("PLSD_DOTs"),
+                                             class = "table-responsive"
+                                           )
+                                    )
+                                  ),
+                                  fluidRow(
+                                    column(width = 12,
+                                           h4("New Samples"),
+                                           div(
+                                             style = "overflow-x: auto;",
+                                             tableOutput("PLSD_newcase"),
+                                             class = "table-responsive"
+                                           )
+                                    )
+                                  )
                                 )
                          ),
-                         column(width = 4,
-                                h4("New Samples"),
+                         column(width = 6,
+                                h3("Average Individual Rat Results"),
                                 div(
-                                  style = "overflow-x: auto;",
-                                  tableOutput("PLSD_newcase"),
+                                  style = "overflow-x: auto; max-height: 600px;",
+                                  tableOutput("AIRR"),
                                   class = "table-responsive"
                                 )
                          )
+                       ),
+                       fluidRow(
+                         column(width = 6,
+                                h3("Average Rat Sample Details"),
+                                div(
+                                  style = "overflow-x: auto; max-height: 600px;",
+                                  fluidRow(
+                                    column(width = 12,
+                                           h4("DOTS Cases"),
+                                           div(
+                                             style = "overflow-x: auto;",
+                                             tableOutput("ARSD_DOTs"),
+                                             class = "table-responsive"
+                                           )
+                                    )
+                                  ),
+                                  fluidRow(
+                                    column(width = 12,
+                                           h4("New Samples"),
+                                           div(
+                                             style = "overflow-x: auto;",
+                                             tableOutput("ARSD_newcase"),
+                                             class = "table-responsive"
+                                           )
+                                    )
+                                  )
+                                )
+                         )
                        )
-                ),
-                column(width = 6,
-                       h3("Average Individual Rat Results"),
-                       div(
-                         style = "overflow-x: auto;",
-                         tableOutput("AIRR"),
-                         class = "table-responsive"
-                       )
-                
-              )
+                )
               )
       ),
       tabItem("Rat_Hit_Analyst",
