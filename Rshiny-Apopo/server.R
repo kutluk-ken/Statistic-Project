@@ -576,6 +576,20 @@ function(input, output, session){
   TotalSampleCase <- TotalDOTSPos + TotalDotsNegative
   TotalPatientCase <- TotalDotsPosPatient + TotalDotsNegPatient
   
+  # Create Pie chart for the table
+  output$pieChart <- renderPlot({
+    # Calculate the proportions for each category
+    proportions <- c(
+      "DOTS Positive Sample" = TotalDOTSPos / TotalSampleCase,
+      "Blinds Sample" = TotalBlindSample / TotalSampleCase,
+      "New cases" = TotalNewCase/TotalSampleCase,
+      "DOTS Negative Sample" = TotalDotsNegative / TotalSampleCase
+    )
+    pie(proportions, labels = names(proportions), main = "Category Distribution")
+  })
+  
+  
+  
   # Create the data for the overview_TPR table
   
   overview_TPR <- data.frame(
@@ -624,6 +638,33 @@ function(input, output, session){
                   paste0(100.0,"%"))
   ) 
   
+  # Create visualizations for Program-Level Sample Details table
+  output$barChart_Dots <- renderPlot({
+    # Prepare the data
+    dots_cases <- data.frame(
+      Bact.load = c("3+", "2+", "1+", "Scanty"),
+      Total = c(TotalDOTSPos3Plus, TotalDOTSPos2Plus,
+                TotalDOTSPos1Plus, TotalDOTSPosScanty)
+    )
+    
+    # Create the bar chart
+    barplot(dots_cases$Total, names.arg = dots_cases$Bact.load, xlab = "Bacterial Load", ylab = "Total Count", main = "DOTS Cases")
+  })
+  
+  output$barChart_newcases <- renderPlot({
+    # Prepare the data
+    new_cases <- data.frame(
+      Bact.load = c("3+", "2+", "1+", "Scanty"),
+      Total = c(TotalNewCase3Plus, TotalNewCase2Plus,
+                TotalNewCase1Plus, TotalNewCaseScanty)
+    )
+    
+    # Create the bar chart
+    barplot(new_cases$Total, names.arg = new_cases$Bact.load, xlab = "Bacterial Load", ylab = "Total Count", main = "New Cases")
+  })
+  
+  
+  
   # Average Individual Rat Results
   TotalRats <- n_distinct(TB_rat$RAT_NAME)
   # rat_hits <- TB_rat %>%
@@ -653,8 +694,8 @@ function(input, output, session){
   
   # Construct overview_AIRR data frame
   overview_AIRR <- data.frame(
-    Total = c("Rats", "DOTS Positive", "Sensitivity", "Blinds", 
-              "Sensitivity-Blinds", "DOTS Negative", "Specificity", 
+    Total = c("Rats", "DOTS Positive", "Sensitivity-Dots", "Blinds", 
+              "Sensitivity-Blinds", "DOTS Negative", "Specificity-Dots", 
               "New Cases"),
     Indicated = c(TotalRats, round(Average_Dots_Hits,2), paste0(round(Average_Sen*100,1),'%'), round(Average_Blind_Hit,2),
                   paste0(round(Average_Blind_Sensitivity*100,1),'%'), round(Average_Negative_Hits,2),
@@ -665,6 +706,24 @@ function(input, output, session){
            , round(SD_Blind_Sensitivity,2), round(SD_Negative_Hits,2),
            round(SD_Negative_Specificity,2), round(SD_Hits_NewCase,2))
   ) 
+  
+  
+  # Visualization for overview_AIRR data frame
+  output$sensitivitySpecificityPlot <- renderPlot({
+    # Filter the data for sensitivity and specificity rows
+    filtered_data <- subset(overview_AIRR, Total %in% c("Sensitivity-Dots", "Sensitivity-Blinds", "Specificity-Dots"))
+    
+    # Convert the percentage values to numeric
+    filtered_data$Indicated <- as.numeric(gsub("%", "", filtered_data$Indicated))
+    
+    # Create a line plot
+    ggplot(filtered_data, aes(x = Total, y = Indicated, group = 1)) +
+      geom_line() +
+      geom_point() +
+      labs(x = "Metric", y = "Percentage", fill = "Metric") +
+      theme_light()
+  })
+  
   
   # Average Rat Sample Details 
   
@@ -760,31 +819,160 @@ function(input, output, session){
                      paste0(100.0,"%"))
   ) 
   
+  # Visualization for ARSD
+  # output$groupedBarPlot <- renderPlot({
+  #   # Combine the data frames
+  #   combined_data <- rbind(overview_ARSD_Dots, overview_ARSD_Newcase)
+  #   combined_data$Dataset <- rep(c("DOTS Cases", "New Samples"), each = nrow(overview_ARSD_Dots))
+  #   
+  #   # Convert Percentage Total to factor and set the order
+  #   combined_data$`Percentage Total` <- factor(combined_data$`Percentage Total`,
+  #                                              levels = c("100.0%", "28.8%", "29%", "21.7%", "20.5%"))
+  #   
+  #   # Create the grouped bar plot
+  #   ggplot(combined_data, aes(x = `Bact load`, y = `Percentage HIT`, fill = Dataset)) +
+  #     geom_bar(stat = "identity", position = "dodge") +
+  #     labs(x = "Bact load", y = "Percentage HIT", fill = "Dataset") +
+  #     theme_minimal()
+  # })
   
   # Total Program Results table in UI
   output$TPR <- renderTable({
     overview_TPR
   })
-  
+
   # Program-Level Sample Details in UI
   output$PLSD_DOTs <- renderTable({
     overview_PLSD_DOTs
   })
-  
+
   output$PLSD_newcase <- renderTable({
     overview_PLSD_newcase
   })
-  
+
   output$AIRR <- renderTable({
     overview_AIRR
   })
-  
+
   output$ARSD_DOTs <- renderTable({
     overview_ARSD_Dots
   })
   output$ARSD_newcase <- renderTable({
     overview_ARSD_Newcase
   })
+
+  # 
+  # output$selectedTable <- renderUI({
+  #   selectedTable <- input$tableSelect
+  #   if (is.null(selectedTable)) {
+  #     return()
+  #   }
+  #   
+  #   if (selectedTable == "Total Program Results") {
+  #     div(
+  #       style = "overflow-x: auto;",
+  #       tableOutput("TPR"),
+  #       class = "table-responsive"
+  #     )
+  #   } else if (selectedTable == "Program-Level Sample Details") {
+  #     div(
+  #       style = "overflow-x: auto;",
+  #       fluidRow(
+  #         column(width = 12,
+  #                h4("DOTS Cases"),
+  #                div(
+  #                  style = "overflow-x: auto;",
+  #                  tableOutput("PLSD_DOTs"),
+  #                  class = "table-responsive"
+  #                )
+  #         )
+  #       ),
+  #       fluidRow(
+  #         column(width = 12,
+  #                h4("New Samples"),
+  #                div(
+  #                  style = "overflow-x: auto;",
+  #                  tableOutput("PLSD_newcase"),
+  #                  class = "table-responsive"
+  #                )
+  #         )
+  #       )
+  #     )
+  #   } else if (selectedTable == "Average Individual Rat Results") {
+  #     div(
+  #       style = "overflow-x: auto;",
+  #       tableOutput("AIRR"),
+  #       class = "table-responsive"
+  #     )
+  #   } else if (selectedTable == "Average Rat Sample Details") {
+  #     div(
+  #       style = "overflow-x: auto;",
+  #       fluidRow(
+  #         column(width = 12,
+  #                h4("DOTS Cases"),
+  #                div(
+  #                  style = "overflow-x: auto;",
+  #                  tableOutput("ARSD_DOTs"),
+  #                  class = "table-responsive"
+  #                )
+  #         )
+  #       ),
+  #       fluidRow(
+  #         column(width = 12,
+  #                h4("New Samples"),
+  #                div(
+  #                  style = "overflow-x: auto;",
+  #                  tableOutput("ARSD_newcase"),
+  #                  class = "table-responsive"
+  #                )
+  #         )
+  #       )
+  #     )
+  #   }
+  # })
+  # 
+  # output$TPR <- renderTable({
+  #   if (is.null(input$tableSelect) || input$tableSelect != "Total Program Results") {
+  #     return(NULL)
+  #   }
+  #   overview_TPR
+  # })
+  # 
+  # output$PLSD_DOTs <- renderTable({
+  #   if (is.null(input$tableSelect) || input$tableSelect != "Program-Level Sample Details") {
+  #     return(NULL)
+  #   }
+  #   overview_PLSD_DOTs
+  # })
+  # 
+  # output$PLSD_newcase <- renderTable({
+  #   if (is.null(input$tableSelect) || input$tableSelect != "Program-Level Sample Details") {
+  #     return(NULL)
+  #   }
+  #   overview_PLSD_newcase
+  # })
+  # 
+  # output$AIRR <- renderTable({
+  #   if (is.null(input$tableSelect) || input$tableSelect != "Average Individual Rat Results") {
+  #     return(NULL)
+  #   }
+  #   overview_AIRR
+  # })
+  # 
+  # output$ARSD_DOTs <- renderTable({
+  #   if (is.null(input$tableSelect) || input$tableSelect != "Average Rat Sample Details") {
+  #     return(NULL)
+  #   }
+  #   overview_ARSD_Dots
+  # })
+  # 
+  # output$ARSD_newcase <- renderTable({
+  #   if (is.null(input$tableSelect) || input$tableSelect != "Average Rat Sample Details") {
+  #     return(NULL)
+  #   }
+  #   overview_ARSD_Newcase
+  # })
+  
   
   
   # Render the tables in the UI

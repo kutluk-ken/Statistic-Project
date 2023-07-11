@@ -18,6 +18,7 @@ library(shinydashboard)
 #     verbatimTextOutput("summary")
 #   )
 # )
+
 ui <- dashboardPage(
   dashboardHeader(title = "My Dashboard"),
   dashboardSidebar(
@@ -36,83 +37,121 @@ ui <- dashboardPage(
     )
   ),
   dashboardBody(
+    tags$style(HTML("
+      .custom-table th:first-child,
+      .custom-table td:first-child {
+        background-color: #f5f5f5;
+        font-weight: bold;
+      }
+      
+      .custom-table th,
+      .custom-table td {
+        padding: 8px;
+        border: 1px solid #ddd;
+      }
+      
+      .custom-table th {
+        background-color: #f9f9f9;
+      }
+      
+      .custom-table tbody tr:nth-child(even) {
+        background-color: #f1f1f1;
+      }
+      
+      .custom-table tbody tr:hover {
+        background-color: #f1f1f1;
+      }
+    ")),
     tabItems(
       tabItem("Overview",
               h2("Overview"),
-              fluidRow(
-                column(width = 3,
-                       h3("Total Program Results"),
-                       div(
-                         style = "overflow-x: auto; max-height: 600px;",
-                         tableOutput("TPR"),
-                         class = "table-responsive"
-                       )
+              tabsetPanel(
+                id = "overviewTabs",
+                tabPanel("Total Program Results",
+                         fluidRow(
+                           column(width = 6,
+                                  div(
+                                    style = "overflow-x: auto; max-height: 600px;",
+                                    tableOutput("TPR"),
+                                    style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif; table-layout: fixed;",
+                                    class = "custom-table"
+                                  )
+                           ),
+                           column(width = 6,
+                                  plotOutput("pieChart")
+                           )
+                         )
                 ),
-                column(width = 9,
-                       fluidRow(
-                         column(width = 6,
-                                h3("Program-Level Sample Details"),
-                                div(
-                                  style = "overflow-x: auto; max-height: 600px;",
-                                  fluidRow(
-                                    column(width = 12,
-                                           h4("DOTS Cases"),
-                                           div(
-                                             style = "overflow-x: auto;",
-                                             tableOutput("PLSD_DOTs"),
-                                             class = "table-responsive"
-                                           )
-                                    )
-                                  ),
-                                  fluidRow(
-                                    column(width = 12,
-                                           h4("New Samples"),
-                                           div(
-                                             style = "overflow-x: auto;",
-                                             tableOutput("PLSD_newcase"),
-                                             class = "table-responsive"
-                                           )
-                                    )
+                tabPanel("Program-Level Sample Details",
+                         fluidRow(
+                           column(width = 6,
+                                  h4("DOTS Cases"),
+                                  div(
+                                    style = "overflow-x: auto; max-height: 600px;",
+                                    tableOutput("PLSD_DOTs"),
+                                    style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif;",
+                                    class = "custom-table"
                                   )
-                                )
+                           ),
+                          column(width = 6,
+                                  plotOutput("barChart_Dots")
+                           )
+                          ),
+                         fluidRow(
+                           column(width = 6,
+                                  h4("New Samples"),
+                                  div(
+                                    style = "overflow-x: auto; max-height: 600px;",
+                                    tableOutput("PLSD_newcase"),
+                                    style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif;",
+                                    class = "custom-table"
+                                  )
+                           )
+                         ,
+                          column(width = 6,
+                                plotOutput("barChart_newcases")
+                           )
+                         )
+                ),
+                tabPanel("Average Individual Rat Results",
+                         fluidRow(
+                           column(width = 12,
+                                  div(
+                                    style = "overflow-x: auto; max-height: 600px;",
+                                    tableOutput("AIRR"),
+                                    style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif;",
+                                    class = "custom-table"
+                                  )
+                           )
+                         ,
+                          column(width = 12,
+                                 plotOutput("sensitivitySpecificityPlot")
+                          )
+                         )
+                ),
+                tabPanel("Average Rat Sample Details",
+                         fluidRow(
+                           column(width = 12,
+                                  h4("DOTS Cases"),
+                                  div(
+                                    style = "overflow-x: auto; max-height: 600px;",
+                                    tableOutput("ARSD_DOTs"),
+                                    style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif;",
+                                    class = "custom-table"
+                                  )
+                           )
                          ),
-                         column(width = 6,
-                                h3("Average Individual Rat Results"),
-                                div(
-                                  style = "overflow-x: auto; max-height: 600px;",
-                                  tableOutput("AIRR"),
-                                  class = "table-responsive"
-                                )
-                         )
-                       ),
-                       fluidRow(
-                         column(width = 6,
-                                h3("Average Rat Sample Details"),
-                                div(
-                                  style = "overflow-x: auto; max-height: 600px;",
-                                  fluidRow(
-                                    column(width = 12,
-                                           h4("DOTS Cases"),
-                                           div(
-                                             style = "overflow-x: auto;",
-                                             tableOutput("ARSD_DOTs"),
-                                             class = "table-responsive"
-                                           )
-                                    )
-                                  ),
-                                  fluidRow(
-                                    column(width = 12,
-                                           h4("New Samples"),
-                                           div(
-                                             style = "overflow-x: auto;",
-                                             tableOutput("ARSD_newcase"),
-                                             class = "table-responsive"
-                                           )
-                                    )
+                         fluidRow(
+                           column(width = 12,
+                                  h4("New Samples"),
+                                  div(
+                                    style = "overflow-x: auto; max-height: 600px;",
+                                    tableOutput("ARSD_newcase"),
+                                    style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif;",
+                                    class = "custom-table"
                                   )
-                                )
+                           )
                          )
-                       )
                 )
               )
       ),
@@ -229,3 +268,4 @@ ui <- dashboardPage(
     )
   )
 )
+
