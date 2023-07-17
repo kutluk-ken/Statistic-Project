@@ -71,7 +71,13 @@ ui <- dashboardPage(
                 id = "overviewTabs",
                 tabPanel("Total Program Results",
                          fluidRow(
-                           column(4,DT::dataTableOutput("TPR")),
+                           selectInput("timePeriod", "Select Time Period:",
+                                       choices = c("Overall", "Day", "Week", "Month"),
+                                       selected = "Overall"),
+                           uiOutput("dateInput"),
+                           uiOutput("weekInput"),
+                           uiOutput("monthInput"),
+                           column(4,DT::dataTableOutput("overviewTable")),
                            column(6, plotOutput("pieChart"))
                          )
                 ),

@@ -17,6 +17,7 @@ library(DT)
 library(dplyr)
 library(scales)
 library(shinyWidgets)
+library(plotly)
 
 # NA function for datatable
 rowCallback <- c(
@@ -584,80 +585,187 @@ function(input, output, session){
   
   # Total Program Results
   
-  # DOTS Positive - Samples
-  TotalDOTSPos <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS != 1)$ID_SAMPLE)
-  # DOTS Positive - Patients
-  TotalDotsPosPatient <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS != 1)$ID_PATIENT)
-  # DOTS Blind - Sample
-  TotalBlindSample <- n_distinct(subset(TB_Adtl, TB_Adtl$STATUS_BLINDPOS == "TRUE")$ID_SAMPLE)
-  # DOTS Blind - Patients
-  TotalBlindPatient <- n_distinct(subset(TB_Adtl, TB_Adtl$STATUS_BLINDPOS == "TRUE")$ID_PATIENT)
-  # DOTS Negative - Samples
-  TotalDotsNegative <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1)$ID_SAMPLE)
-  # DOTS Negative - Patients
-  TotalDotsNegPatient <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1)$ID_PATIENT)
-  # DOTS Negative Indicated (Postive samples that are detected as negative?) !
-  TotalNegativeIndicated <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$RatHit > 0)$ID_SAMPLE) #Changed TB_Adtl$RatHit to >0.
-  # DOTS Unconfirmed HITS (Negative sample that are detected as positive?) !
-  UnconfirmedNegHit <- n_distinct(subset(TB_Adtl, TB_Adtl$RatHit > 0 & TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO == 1)$ID_SAMPLE)
-  # DOTS Total New Case - Sample
-  TotalNewCase <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 1)$ID_SAMPLE)  
-  # DOTS Total New Case - Patients
-  TotalNewCasePatient <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 1)$ID_PATIENT)  
-  
-  TotalSampleCase <- TotalDOTSPos + TotalDotsNegative
-  TotalPatientCase <- TotalDotsPosPatient + TotalDotsNegPatient
-  
-  # Create Pie chart for the table
-  output$pieChart <- renderPlot({
-    # Calculate the proportions for each category
-    proportions <- c(
-      "DOTS Positive Sample" = TotalDOTSPos / TotalSampleCase,
-      "Blinds Sample" = TotalBlindSample / TotalSampleCase,
-      "New cases" = TotalNewCase/TotalSampleCase,
-      "DOTS Negative Sample" = TotalDotsNegative / TotalSampleCase
-    )
-    proportions <- data.frame(name = names(proportions), value = proportions * TotalSampleCase)
-    #pie(proportions, labels = names(proportions), main = "Category Distribution")
-    ggplot(proportions, aes(x = "", y = value, fill = name))  + geom_col(color = "black") +
-      geom_text(aes(label = value),
-                position = position_stack(vjust = 0.5)) +
-      coord_polar(theta = "y") +
-      scale_fill_brewer() + ggtitle("Pie Chart For Total Program results") +
-      theme_void()
+  filteredData <- reactive({
+    if (input$timePeriod == "Overall") {
+      TB_Adtl
+    } else if (input$timePeriod == "Day") {
+      subset(TB_Adtl, as.Date(DATE) == input$date)
+    } else if (input$timePeriod == "Week") {
+      subset(TB_Adtl, week_numbers == input$week)
+    } else if (input$timePeriod == "Month") {
+      subset(TB_Adtl, month_numbers == input$month)
+    }
   })
   
+  output$dateInput <- renderUI({
+    if (input$timePeriod == "Day") {
+      selectInput("date", "Select Date:", choices = unique(TB_Adtl$DATE), selected = Sys.Date())
+    } else {
+      NULL
+    }
+  })
   
+  output$weekInput <- renderUI({
+    if (input$timePeriod == "Week") {
+      selectInput("week", "Select Week:", choices = unique(TB_Adtl$week_numbers))
+    } else {
+      NULL
+    }
+  })
   
-  # Create the data for the overview_TPR table
+  output$monthInput <- renderUI({
+    if (input$timePeriod == "Month") {
+      selectInput("month", "Select Month:", choices = unique(TB_Adtl$month_numbers))
+    } else {
+      NULL
+    }
+  })
   
-  overview_TPR <- data.frame(
-    Category = c("DOTS Positive", "Blinds", "DOTS Negative", "Neg samples indicated", 
-                 "Unconfirmed HITS", "New Cases", "Avg #Rats HIT New Case", 
-                 "Total Cases", "Increase in detection"),
-    Samples = c(TotalDOTSPos, TotalBlindSample, TotalDotsNegative, TotalNegativeIndicated,
-                UnconfirmedNegHit, TotalNewCase, NA, TotalSampleCase, NA),
-    Patients = c(TotalDotsPosPatient, TotalBlindPatient, TotalDotsNegPatient, NA, NA,
-                 TotalNewCasePatient, NA, TotalPatientCase, NA),
-    Prevalence = c(paste0(round((TotalDOTSPos / TotalSampleCase) * 100, 1), "%"), 
-                   paste0(round((TotalBlindSample / TotalDOTSPos) * 100, 1), "%"), 
-                   paste0(round((TotalDotsNegative / TotalSampleCase) * 100, 1), "%"),
-                   paste0(round((TotalNegativeIndicated / TotalDotsNegative) * 100, 1), "%"), 
-                   paste0(round((UnconfirmedNegHit / TotalNegativeIndicated) * 100, 1), "%"),
-                   paste0(round((TotalNewCase / TotalDotsNegative) * 100, 1), "%"), NA, NA,
-                   paste0(round(( TotalNewCase / TotalDotsPosPatient) * 100, 1), "%"))
-  ) 
+  output$pieChart <- renderPlotly({
+    filteredData <- filteredData()
+    
+    # Calculate the proportions for each category
+    proportions <- c(
+      "DOTS Positive Sample" = n_distinct(subset(filteredData, ID_BL_DOTS != 1)$ID_SAMPLE),
+      "Blinds Sample" = n_distinct(subset(filteredData, STATUS_BLINDPOS == "TRUE")$ID_SAMPLE),
+      "New cases" = n_distinct(subset(filteredData, ID_BL_DOTS == 1 & ID_BL_APOPO > 1)$ID_SAMPLE),
+      "DOTS Negative Sample" = n_distinct(subset(filteredData, ID_BL_DOTS == 1)$ID_SAMPLE)
+    )
+    
+    proportions <- proportions * TotalSampleCase / sum(proportions)
+    labels <- names(proportions)
+    
+    # Create the pie chart
+    pie_chart <- plot_ly(
+      labels = labels,
+      values = proportions,
+      type = "pie",
+      textposition = "inside",
+      textinfo = "label+percent",
+      hole = 0.4
+    ) %>%
+      layout(
+        title = "Pie Chart for Total Program Results",
+        showlegend = FALSE
+      )
+    
+    pie_chart
+  })
   
-  # Program-Level Sample Details
-  TotalDOTSPos3Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 13)$ID_SAMPLE)
-  TotalDOTSPos2Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 12)$ID_SAMPLE)
-  TotalDOTSPos1Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 11)$ID_SAMPLE)
-  TotalNewCase1Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 11)$ID_SAMPLE)  
-  TotalNewCase2Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 12)$ID_SAMPLE)  
-  TotalNewCase3Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 13)$ID_SAMPLE)  
-  TotalDOTSPosScanty <- TotalDOTSPos - TotalDOTSPos3Plus - TotalDOTSPos2Plus - TotalDOTSPos1Plus # CHECK!!! 
-  TotalNewCaseScanty <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS > 1)$ID_SAMPLE) - TotalNewCase1Plus - TotalNewCase2Plus - TotalNewCase3Plus
+  output$overviewTable <- renderDataTable({
+    filteredData <- filteredData()
+    
+    # Calculate the required values based on the filtered data
+    TotalDOTSPos <- n_distinct(subset(filteredData, ID_BL_DOTS != 1)$ID_SAMPLE)
+    TotalDotsPosPatient <- n_distinct(subset(filteredData, ID_BL_DOTS != 1)$ID_PATIENT)
+    TotalBlindSample <- n_distinct(subset(filteredData, STATUS_BLINDPOS == "TRUE")$ID_SAMPLE)
+    TotalBlindPatient <- n_distinct(subset(filteredData, STATUS_BLINDPOS == "TRUE")$ID_PATIENT)
+    TotalDotsNegative <- n_distinct(subset(filteredData, ID_BL_DOTS == 1)$ID_SAMPLE)
+    TotalDotsNegPatient <- n_distinct(subset(filteredData, ID_BL_DOTS == 1)$ID_PATIENT)
+    TotalNegativeIndicated <- n_distinct(subset(filteredData, ID_BL_DOTS == 1 & RatHit > 0)$ID_SAMPLE)
+    UnconfirmedNegHit <- n_distinct(subset(filteredData, RatHit > 0 & ID_BL_DOTS == 1 & ID_BL_APOPO == 1)$ID_SAMPLE)
+    TotalNewCase <- n_distinct(subset(filteredData, ID_BL_DOTS == 1 & ID_BL_APOPO > 1)$ID_SAMPLE)
+    TotalNewCasePatient <- n_distinct(subset(filteredData, ID_BL_DOTS == 1 & ID_BL_APOPO > 1)$ID_PATIENT)
+    TotalSampleCase <- TotalDOTSPos + TotalDotsNegative
+    TotalPatientCase <- TotalDotsPosPatient + TotalDotsNegPatient
+    
+    # Create the overview table with the calculated values
+    overview_TPR <- data.frame(
+      Category = c("DOTS Positive", "Blinds", "DOTS Negative", "Neg samples indicated", 
+                   "Unconfirmed HITS", "New Cases", "Avg #Rats HIT New Case", 
+                   "Total Cases", "Increase in detection"),
+      Samples = c(TotalDOTSPos, TotalBlindSample, TotalDotsNegative, TotalNegativeIndicated,
+                  UnconfirmedNegHit, TotalNewCase, NA, TotalSampleCase, NA),
+      Patients = c(TotalDotsPosPatient, TotalBlindPatient, TotalDotsNegPatient, NA, NA,
+                   TotalNewCasePatient, NA, TotalPatientCase, NA),
+      Prevalence = c(paste0(round((TotalDOTSPos / TotalSampleCase) * 100, 1), "%"), 
+                     paste0(round((TotalBlindSample / TotalDOTSPos) * 100, 1), "%"), 
+                     paste0(round((TotalDotsNegative / TotalSampleCase) * 100, 1), "%"),
+                     paste0(round((TotalNegativeIndicated / TotalDotsNegative) * 100, 1), "%"), 
+                     paste0(round((UnconfirmedNegHit / TotalNegativeIndicated) * 100, 1), "%"),
+                     paste0(round((TotalNewCase / TotalDotsNegative) * 100, 1), "%"), NA, NA,
+                     paste0(round(( TotalNewCase / TotalDotsPosPatient) * 100, 1), "%"))
+    ) 
+    
+    datatable(overview_TPR)
+  })
   
+ 
+
+  # # DOTS Positive - Samples
+  # TotalDOTSPos <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS != 1)$ID_SAMPLE)
+  # # DOTS Positive - Patients
+  # TotalDotsPosPatient <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS != 1)$ID_PATIENT)
+  # # DOTS Blind - Sample
+  # TotalBlindSample <- n_distinct(subset(TB_Adtl, TB_Adtl$STATUS_BLINDPOS == "TRUE")$ID_SAMPLE)
+  # # DOTS Blind - Patients
+  # TotalBlindPatient <- n_distinct(subset(TB_Adtl, TB_Adtl$STATUS_BLINDPOS == "TRUE")$ID_PATIENT)
+  # # DOTS Negative - Samples
+  # TotalDotsNegative <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1)$ID_SAMPLE)
+  # # DOTS Negative - Patients
+  # TotalDotsNegPatient <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1)$ID_PATIENT)
+  # # DOTS Negative Indicated (Postive samples that are detected as negative?) !
+  # TotalNegativeIndicated <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$RatHit > 0)$ID_SAMPLE) #Changed TB_Adtl$RatHit to >0.
+  # # DOTS Unconfirmed HITS (Negative sample that are detected as positive?) !
+  # UnconfirmedNegHit <- n_distinct(subset(TB_Adtl, TB_Adtl$RatHit > 0 & TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO == 1)$ID_SAMPLE)
+  # # DOTS Total New Case - Sample
+  # TotalNewCase <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 1)$ID_SAMPLE)  
+  # # DOTS Total New Case - Patients
+  # TotalNewCasePatient <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 1)$ID_PATIENT)  
+  # 
+  # TotalSampleCase <- TotalDOTSPos + TotalDotsNegative
+  # TotalPatientCase <- TotalDotsPosPatient + TotalDotsNegPatient
+  # 
+  # # Create Pie chart for the table
+  # output$pieChart <- renderPlot({
+  #   # Calculate the proportions for each category
+  #   proportions <- c(
+  #     "DOTS Positive Sample" = TotalDOTSPos / TotalSampleCase,
+  #     "Blinds Sample" = TotalBlindSample / TotalSampleCase,
+  #     "New cases" = TotalNewCase/TotalSampleCase,
+  #     "DOTS Negative Sample" = TotalDotsNegative / TotalSampleCase
+  #   )
+  #   proportions <- data.frame(name = names(proportions), value = proportions * TotalSampleCase)
+  #   #pie(proportions, labels = names(proportions), main = "Category Distribution")
+  #   ggplot(proportions, aes(x = "", y = value, fill = name))  + geom_col(color = "black") +
+  #     geom_text(aes(label = value),
+  #               position = position_stack(vjust = 0.5)) +
+  #     coord_polar(theta = "y") +
+  #     scale_fill_brewer() + ggtitle("Pie Chart For Total Program results") +
+  #     theme_void()
+  # })
+  # 
+  # 
+  # 
+  # # Create the data for the overview_TPR table
+  # 
+  # overview_TPR <- data.frame(
+  #   Category = c("DOTS Positive", "Blinds", "DOTS Negative", "Neg samples indicated", 
+  #                "Unconfirmed HITS", "New Cases", "Avg #Rats HIT New Case", 
+  #                "Total Cases", "Increase in detection"),
+  #   Samples = c(TotalDOTSPos, TotalBlindSample, TotalDotsNegative, TotalNegativeIndicated,
+  #               UnconfirmedNegHit, TotalNewCase, NA, TotalSampleCase, NA),
+  #   Patients = c(TotalDotsPosPatient, TotalBlindPatient, TotalDotsNegPatient, NA, NA,
+  #                TotalNewCasePatient, NA, TotalPatientCase, NA),
+  #   Prevalence = c(paste0(round((TotalDOTSPos / TotalSampleCase) * 100, 1), "%"), 
+  #                  paste0(round((TotalBlindSample / TotalDOTSPos) * 100, 1), "%"), 
+  #                  paste0(round((TotalDotsNegative / TotalSampleCase) * 100, 1), "%"),
+  #                  paste0(round((TotalNegativeIndicated / TotalDotsNegative) * 100, 1), "%"), 
+  #                  paste0(round((UnconfirmedNegHit / TotalNegativeIndicated) * 100, 1), "%"),
+  #                  paste0(round((TotalNewCase / TotalDotsNegative) * 100, 1), "%"), NA, NA,
+  #                  paste0(round(( TotalNewCase / TotalDotsPosPatient) * 100, 1), "%"))
+  # ) 
+  # 
+  # # Program-Level Sample Details
+  # TotalDOTSPos3Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 13)$ID_SAMPLE)
+  # TotalDOTSPos2Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 12)$ID_SAMPLE)
+  # TotalDOTSPos1Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 11)$ID_SAMPLE)
+  # TotalNewCase1Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 11)$ID_SAMPLE)  
+  # TotalNewCase2Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 12)$ID_SAMPLE)  
+  # TotalNewCase3Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 13)$ID_SAMPLE)  
+  # TotalDOTSPosScanty <- TotalDOTSPos - TotalDOTSPos3Plus - TotalDOTSPos2Plus - TotalDOTSPos1Plus # CHECK!!! 
+  # TotalNewCaseScanty <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS > 1)$ID_SAMPLE) - TotalNewCase1Plus - TotalNewCase2Plus - TotalNewCase3Plus
+  # 
   #  Create the data for the Program-Level Sample Details table
   overview_PLSD_DOTs <- data.frame(
     "Bact load" = c("3+", "2+", "1+", "Scanty", "Total"),
