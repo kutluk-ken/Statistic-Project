@@ -7,11 +7,28 @@
 #    http://shiny.rstudio.com/
 #
 
+############### Libraries #################
+
+
 library(shiny)
 library(readxl)
 library(ggplot2)
 library(DT)
 library(dplyr)
+library(scales)
+library(shinyWidgets)
+
+# NA function for datatable
+rowCallback <- c(
+  "function(row, data){",
+  "  for(var i=0; i<data.length; i++){",
+  "    if(data[i] === null){",
+  "      $('td:eq('+i+')', row).html('NA')",
+  "        .css({'color': 'rgb(151,151,151)', 'font-style': 'italic'});",
+  "    }",
+  "  }",
+  "}"  
+)
 
 # # Read the data file
 # data <- read_excel("/Users/kutlukanwar/Desktop/STAD94/TBdetectionRats_Tanzania.xlsx", sheet = 3, col_names = TRUE)
@@ -43,7 +60,7 @@ function(input, output, session){
   #     theme(legend.position = "right")
   # })
   # 
-
+  
   # Check if ID_BL_APOPO has a value and override ID_BL_DOTS
   TB_Adtl$ID_STATUS <- ifelse(!is.na(TB_Adtl$ID_BL_APOPO), TB_Adtl$ID_BL_APOPO, TB_Adtl$ID_BL_DOTS)
   TB_rat$ID_STATUS <- ifelse(!is.na(TB_rat$ID_BL_APOPO), TB_rat$ID_BL_APOPO, TB_rat$ID_BL_DOTS)
@@ -53,7 +70,7 @@ function(input, output, session){
   dar_positive_samples <- subset(TB_Adtl, PROGRAM == "DAR" & TB_Adtl$ID_STATUS != 1)
   morogoro_negative_samples <- subset(TB_Adtl, PROGRAM == "MORO" & TB_Adtl$ID_STATUS == 1)
   morogoro_positive_samples <- subset(TB_Adtl, PROGRAM == "MORO" & TB_Adtl$ID_STATUS != 1)
- 
+  
   # Create a Name List without duplication
   unique_names <- unique(TB_rat$RAT_NAME)
   
@@ -165,24 +182,34 @@ function(input, output, session){
   }
   
   # Render the tables in the UI
-  output$basicInformation_Sensitivity <- renderTable({
-    Sensitivity_table
+  # Render the tables in the UI
+  output$basicInformation_Sensitivity <-  DT::renderDataTable({
+    datatable(Sensitivity_table, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}")))%>% formatRound(c(4), 4)
   })
   
-  output$basicInformation_Specificity <- renderTable({
-    Specificity_table
-  })
+  output$basicInformation_Specificity <- 
+    DT::renderDataTable({
+      datatable(Specificity_table, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+        "function(settings, json) {",
+        "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+        "}")))%>% formatRound(c(4), 4)
+    })
   
   Individual_rat_performance <- merge(Sensitivity_table, Specificity_table, by = "Rat_Name", all.x = TRUE)
   
   output$Individual_rat_performance <- renderPlot({
-    plot(Individual_rat_performance$Sensitivity, Individual_rat_performance$Specificity, pch = 19, col = c("red", "blue", "green", "orange", "purple"))
-    text(Individual_rat_performance$Sensitivity, Individual_rat_performance$Specificity,
-         labels = Individual_rat_performance$Rat_Name, pos = 4, cex = 0.8)
+    #plot(Individual_rat_performance$Sensitivity, Individual_rat_performance$Specificity, pch = 19, col = c("red", "blue", "green", "orange", "purple"), ylab = "Specificity",xlab = "Sensitivity")
+    #text(Individual_rat_performance$Sensitivity, Individual_rat_performance$Specificity,
+    #labels = Individual_rat_performance$Rat_Name, pos = 4, cex = 0.8)
+    ggplot(Individual_rat_performance, aes(Sensitivity, Specificity,color = Rat_Name)) + geom_point() + labs(fill = "Rat Name") + 
+      theme(plot.background = element_rect(fill = "grey95"))
   })
   
   ## Trainer  
-
+  
   # Create the week number
   TB_Adtl$DATE <- as.Date(TB_Adtl$SESSION_DATE, format = "%Y/%m/%d")
   TB_Adtl$week_numbers <- format(TB_Adtl$DATE, format = "%U")
@@ -197,11 +224,10 @@ function(input, output, session){
   # Trainer Sensitivity
   # Create a Name List without duplication
   unique_names <- unique(TB_rat$TRAINER)
-  
   # Creating a table showing Sensitivity
   Sensitivity_trainer_table <- data.frame()
   
-  # Loop over all rats' name
+  # Loop over all trainers' name
   for (name in unique_names) {
     # Splitting the wanted subset with specific name
     # Total Positive samples
@@ -255,12 +281,18 @@ function(input, output, session){
   }
   
   # Render the tables in the UI
-  output$Trainer_Sensitivity <- renderTable({
-    Sensitivity_trainer_table
+  output$Trainer_Sensitivity <- DT::renderDataTable({
+    datatable(Sensitivity_trainer_table, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"))) %>% formatRound(c(4), 4)
   })
   
-  output$Trainer_Specificity <- renderTable({
-    Specificity_trainer_table
+  output$Trainer_Specificity <- DT::renderDataTable({
+    datatable(Specificity_trainer_table, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"))) %>% formatRound(c(4), 4)
   })
   
   # Trainer Sensitivity Daily
@@ -303,7 +335,7 @@ function(input, output, session){
   }
   
   Sensitivity_trainer_table_daily$Date <- as.Date(Sensitivity_trainer_table_daily$Date, origin = "1970-01-01", format = "%Y-%m-%d")
-
+  
   
   # Trainer Specificity Daily
   # Create a Name List without duplication
@@ -345,7 +377,7 @@ function(input, output, session){
   }
   
   Specificity_trainer_table_daily$Date <- as.Date(Specificity_trainer_table_daily$Date, origin = "1970-01-01", format = "%Y-%m-%d")
-
+  
   # Trainer Sensitivity Weekly
   # Create a Name List without duplication
   # unique_names <- unique(TB_rat$TRAINER)
@@ -465,7 +497,7 @@ function(input, output, session){
   }
   
   # Trainer Specificity Monthly
-
+  
   # Create a Name List without duplication
   # unique_names <- unique(TB_rat$RAT_NAME)
   
@@ -550,7 +582,7 @@ function(input, output, session){
     NewCase_table <- rbind(NewCase_table, new_row)
   }
   
- # Total Program Results
+  # Total Program Results
   
   # DOTS Positive - Samples
   TotalDOTSPos <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS != 1)$ID_SAMPLE)
@@ -585,7 +617,14 @@ function(input, output, session){
       "New cases" = TotalNewCase/TotalSampleCase,
       "DOTS Negative Sample" = TotalDotsNegative / TotalSampleCase
     )
-    pie(proportions, labels = names(proportions), main = "Category Distribution")
+    proportions <- data.frame(name = names(proportions), value = proportions * TotalSampleCase)
+    #pie(proportions, labels = names(proportions), main = "Category Distribution")
+    ggplot(proportions, aes(x = "", y = value, fill = name))  + geom_col(color = "black") +
+      geom_text(aes(label = value),
+                position = position_stack(vjust = 0.5)) +
+      coord_polar(theta = "y") +
+      scale_fill_brewer() + ggtitle("Pie Chart For Total Program results") +
+      theme_void()
   })
   
   
@@ -624,18 +663,18 @@ function(input, output, session){
     "Bact load" = c("3+", "2+", "1+", "Scanty", "Total"),
     "Total" = c(TotalDOTSPos3Plus, TotalDOTSPos2Plus, TotalDOTSPos1Plus, TotalDOTSPosScanty, TotalDOTSPos),
     "Percentage" = c(paste0(round((TotalDOTSPos3Plus / TotalDOTSPos) * 100, 1), "%"),
-                  paste0(round((TotalDOTSPos2Plus / TotalDOTSPos) * 100, 1), "%"),
-                  paste0(round((TotalDOTSPos1Plus / TotalDOTSPos) * 100, 1),"%"),
-                  paste0(round((TotalDOTSPosScanty / TotalDOTSPos) * 100, 1),"%"), paste0(100.0,"%"))
+                     paste0(round((TotalDOTSPos2Plus / TotalDOTSPos) * 100, 1), "%"),
+                     paste0(round((TotalDOTSPos1Plus / TotalDOTSPos) * 100, 1),"%"),
+                     paste0(round((TotalDOTSPosScanty / TotalDOTSPos) * 100, 1),"%"), paste0(100.0,"%"))
   ) 
   overview_PLSD_newcase <- data.frame(
     "Bact load" = c("3+", "2+", "1+", "Scanty", "Total"),
     "Total" = c(TotalNewCase3Plus, TotalNewCase2Plus, TotalNewCase1Plus, TotalNewCaseScanty, TotalNewCase),
     "Percentage" = c(paste0(round((TotalNewCase3Plus / TotalNewCase) * 100, 1), "%"), 
-                  paste0(round((TotalNewCase2Plus / TotalNewCase) * 100, 1), "%"),
-                  paste0(round((TotalNewCase1Plus / TotalNewCase) * 100, 1), "%"),
-                  paste0(round((TotalNewCaseScanty / TotalNewCase) * 100, 1), "%"),
-                  paste0(100.0,"%"))
+                     paste0(round((TotalNewCase2Plus / TotalNewCase) * 100, 1), "%"),
+                     paste0(round((TotalNewCase1Plus / TotalNewCase) * 100, 1), "%"),
+                     paste0(round((TotalNewCaseScanty / TotalNewCase) * 100, 1), "%"),
+                     paste0(100.0,"%"))
   ) 
   
   # Create visualizations for Program-Level Sample Details table
@@ -648,8 +687,8 @@ function(input, output, session){
     )
     
     # Create the bar chart
-    barplot(dots_cases$Total, names.arg = dots_cases$Bact.load, xlab = "Bacterial Load", ylab = "Total Count", main = "DOTS Cases")
-  })
+    # barplot(dots_cases$Total, names.arg = dots_cases$Bact.load, xlab = "Bacterial Load", ylab = "Total Count", main = "DOTS Cases")
+    ggplot(dots_cases, aes(x=Bact.load, y=Total, color=Bact.load)) + geom_bar(stat="identity", fill="white") + theme(plot.title = element_text(face = "DOTS cases", size = 20)) })
   
   output$barChart_newcases <- renderPlot({
     # Prepare the data
@@ -660,7 +699,8 @@ function(input, output, session){
     )
     
     # Create the bar chart
-    barplot(new_cases$Total, names.arg = new_cases$Bact.load, xlab = "Bacterial Load", ylab = "Total Count", main = "New Cases")
+    # barplot(new_cases$Total, names.arg = new_cases$Bact.load, xlab = "Bacterial Load", ylab = "Total Count", main = "New Cases")
+    ggplot(new_cases, aes(x = Bact.load, y = Total, color = Bact.load)) + geom_bar(stat="identity", fill="white") + theme(plot.title = element_text(face = "New cases", size = 20))
   })
   
   
@@ -701,7 +741,7 @@ function(input, output, session){
                   paste0(round(Average_Blind_Sensitivity*100,1),'%'), round(Average_Negative_Hits,2),
                   paste0(round((Average_Negative_Specificity) * 100, 1), "%"), 
                   round(Average_Hits_NewCase,2)
-                  ),
+    ),
     SD = c("", round(SD_Dots_Hits,2), round(SD_Average_Sen,2), round(SD_Blind_Hit,2)
            , round(SD_Blind_Sensitivity,2), round(SD_Negative_Hits,2),
            round(SD_Negative_Specificity,2), round(SD_Hits_NewCase,2))
@@ -800,23 +840,23 @@ function(input, output, session){
   overview_ARSD_Dots <- data.frame(
     "Bact load" = c("3+", "2+", "1+", "Scanty", "Samples"),
     "Percentage HIT" = c(percentage3plusHit, percentage2plusHit, percentage1plusHit,
-                percentageScantyHit, total123plusScantyHit),
+                         percentageScantyHit, total123plusScantyHit),
     "Percentage Total" = c(paste0(round(percentage3plus * 100, 1), "%"),
-                  paste0(round(percentage2plus * 100, 1), "%"),
-                  paste0(round(percentage1plus * 100, 1),"%"),
-                  paste0(round(percentageScanty * 100, 1),"%"),
-                  paste0(100.0,"%"))
+                           paste0(round(percentage2plus * 100, 1), "%"),
+                           paste0(round(percentage1plus * 100, 1),"%"),
+                           paste0(round(percentageScanty * 100, 1),"%"),
+                           paste0(100.0,"%"))
   )
   overview_ARSD_Newcase <- data.frame(
     "Bact load" = c("3+", "2+", "1+", "Scanty", "Samples"),
     "Percentage HIT" = c(percentage3plusHit_NewCase, percentage2plusHit_NewCase,
-                percentage1plusHit_NewCase,percentageScanty_NewCase,
-                total123plusScantyHit_Newcase),
+                         percentage1plusHit_NewCase,percentageScanty_NewCase,
+                         total123plusScantyHit_Newcase),
     "Percentage Total" = c(paste0(round(percentage3plus_Newcase * 100, 1), "%"), 
-                     paste0(round(percentage2plus_Newcase * 100, 1), "%"),
-                     paste0(round(percentage1plus_Newcase * 100, 1), "%"),
-                     paste0(round(percentageScanty * 100, 1), "%"),
-                     paste0(100.0,"%"))
+                           paste0(round(percentage2plus_Newcase * 100, 1), "%"),
+                           paste0(round(percentage1plus_Newcase * 100, 1), "%"),
+                           paste0(round(percentageScanty * 100, 1), "%"),
+                           paste0(100.0,"%"))
   ) 
   
   # Visualization for ARSD
@@ -837,30 +877,54 @@ function(input, output, session){
   # })
   
   # Total Program Results table in UI
-  output$TPR <- renderTable({
-    overview_TPR
+  output$TPR <- DT::renderDataTable({
+    datatable(overview_TPR, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"), rowCallback = JS(rowCallback)))
   })
-
+  
   # Program-Level Sample Details in UI
-  output$PLSD_DOTs <- renderTable({
-    overview_PLSD_DOTs
+  output$PLSD_DOTs <- DT::renderDataTable({
+    datatable(overview_PLSD_DOTs, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"), rowCallback = JS(rowCallback)))
   })
-
-  output$PLSD_newcase <- renderTable({
-    overview_PLSD_newcase
+  
+  
+  output$PLSD_newcase <- DT::renderDataTable({
+    datatable(overview_PLSD_newcase, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"), rowCallback = JS(rowCallback)))
   })
-
-  output$AIRR <- renderTable({
-    overview_AIRR
+  
+  
+  output$AIRR <- DT::renderDataTable({
+    datatable(overview_AIRR, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"), rowCallback = JS(rowCallback)))
   })
-
-  output$ARSD_DOTs <- renderTable({
-    overview_ARSD_Dots
+  
+  output$ARSD_DOTs <- DT::renderDataTable({
+    datatable(overview_ARSD_Dots, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"), rowCallback = JS(rowCallback)))
   })
-  output$ARSD_newcase <- renderTable({
-    overview_ARSD_Newcase
+  
+  
+  
+  
+  output$ARSD_newcase <- DT::renderDataTable({
+    datatable(overview_ARSD_Newcase, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"), rowCallback = JS(rowCallback)))
   })
-
+  
   # 
   # output$selectedTable <- renderUI({
   #   selectedTable <- input$tableSelect
@@ -974,28 +1038,46 @@ function(input, output, session){
   # })
   
   
-  
   # Render the tables in the UI
-  output$Sensitivity_trainer_table_daily <- renderTable({
-    Sensitivity_trainer_table_daily
+  # Reference for the table: https://stackoverflow.com/questions/43739218/r-datatable-formatting-with-javascript
+  output$Sensitivity_trainer_table_daily <- DT::renderDataTable({
+    datatable(Sensitivity_trainer_table_daily, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"))) %>% formatRound(c(4), 4)
   })
   
-  output$Specificity_trainer_table_daily <- renderTable({
-    Specificity_trainer_table_daily
+  output$Specificity_trainer_table_daily <- DT::renderDataTable({
+    datatable(Specificity_trainer_table_daily, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"))) %>% formatRound(c(4), 4)
   })
-  output$Sensitivity_trainer_table_weekly <- renderTable({
-    Sensitivity_trainer_table_weekly
+  output$Sensitivity_trainer_table_weekly <- DT::renderDataTable({
+    datatable(Sensitivity_trainer_table_weekly, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"))) %>% formatRound(c(4), 4)
   })
   
-  output$Specificity_trainer_table_weekly <- renderTable({
-    Specificity_trainer_table_weekly
+  output$Specificity_trainer_table_weekly <- DT::renderDataTable({
+    datatable(Specificity_trainer_table_weekly, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"))) %>% formatRound(c(4), 4)
   })
-  output$Sensitivity_trainer_table_monthly <- renderTable({
-    Sensitivity_trainer_table_monthly
+  output$Sensitivity_trainer_table_monthly <- DT::renderDataTable({
+    datatable(Sensitivity_trainer_table_monthly, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"))) %>% formatRound(c(4), 4)
   })
   
-  output$Specificity_trainer_table_monthly <- renderTable({
-    Specificity_trainer_table_monthly
+  output$Specificity_trainer_table_monthly <- DT::renderDataTable({
+    datatable(Specificity_trainer_table_monthly, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"))) %>% formatRound(c(4), 4)
   })
   
   # Generate choices for selectInput dynamically
@@ -1006,74 +1088,132 @@ function(input, output, session){
   
   output$trainerSelect <- renderUI({
     # Create the selectInput with the dynamically generated choices
-    selectInput("Trainer_Name", "Select a Trainer", choices = unique_names)
+    selectInput("Trainer_Name", "Select a Trainer", choices = unique(TB_rat$TRAINER))
   })
   
   output$timeSelect <- renderUI({
     # Create the selectInput with the dynamically generated choices
-    selectInput("Time_Select", "Display Time", choices = c("daily", "weekly", "monthly"))
+    selectInput("Time_Select", "Display Time", choices = c("Daily", "Weekly", "Monthly"))
   })
-
-  output$trainertable <- renderTable({
+  
+  output$trainertable <- DT::renderDataTable({
     selectValue <- input$SenSpe
     selectTime <- input$Time_Select
     selectTrainer <- input$Trainer_Name
     if (selectValue == "Sensitivity"){
-      if (selectTime == "daily"){
+      if (selectTime == "Daily"){
         Display_Table <- subset(Sensitivity_trainer_table_daily, Sensitivity_trainer_table_daily$Trainer_Name == selectTrainer)
-      }else if (selectTime == "weekly"){
+        datatable(Display_Table, ,options = list(pageLength = 8, lengthMenu = c(10, 15, 20), initComplete = JS(
+          "function(settings, json) {",
+          "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+          "}"))) %>% formatRound(c(4), 4)
+      }else if (selectTime == "Weekly"){
         Display_Table <- subset(Sensitivity_trainer_table_weekly, Sensitivity_trainer_table_weekly$Trainer_Name == selectTrainer)
+        datatable(Display_Table, ,options = list(pageLength = 8, lengthMenu = c(10, 15, 20), initComplete = JS(
+          "function(settings, json) {",
+          "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+          "}"))) %>% formatRound(c(4), 4)
       }else{
         Display_Table <- subset(Sensitivity_trainer_table_monthly, Sensitivity_trainer_table_monthly$Trainer_Name == selectTrainer)
+        datatable(Display_Table, ,options = list(pageLength = 8, lengthMenu = c(10, 15, 20), initComplete = JS(
+          "function(settings, json) {",
+          "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+          "}"))) %>% formatRound(c(4), 4)
       }
     }else{
-      if (selectTime == "daily"){
+      if (selectTime == "Daily"){
         Display_Table <- subset(Specificity_trainer_table_daily, Specificity_trainer_table_daily$Trainer_Name == selectTrainer)
-      }else if (selectTime == "weekly"){
+        datatable(Display_Table, ,options = list(pageLength = 8, lengthMenu = c(10, 15, 20), initComplete = JS(
+          "function(settings, json) {",
+          "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+          "}"))) %>% formatRound(c(4), 4)
+      }else if (selectTime == "Weekly"){
         Display_Table <- subset(Specificity_trainer_table_weekly, Specificity_trainer_table_weekly$Trainer_Name == selectTrainer)
+        datatable(Display_Table, ,options = list(pageLength = 8, lengthMenu = c(10, 15, 20), initComplete = JS(
+          "function(settings, json) {",
+          "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+          "}"))) %>% formatRound(c(4), 4)
       }else{
         Display_Table <- subset(Specificity_trainer_table_monthly, Specificity_trainer_table_monthly$Trainer_Name == selectTrainer)
+        datatable(Display_Table, ,options = list(pageLength = 8, lengthMenu = c(10, 15, 20), initComplete = JS(
+          "function(settings, json) {",
+          "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+          "}"))) %>% formatRound(c(4), 4)
       }
     }
   })
-
+  
   output$LineChart <- renderPlot({
     selectValue <- input$SenSpe
     selectTime <- input$Time_Select
     selectTrainer <- input$Trainer_Name
     
     if (selectValue == "Sensitivity") {
-      if (selectTime == "daily") {
+      if (selectTime == "Daily") {
         Display_Table <- subset(Sensitivity_trainer_table_daily, Sensitivity_trainer_table_daily$Trainer_Name == selectTrainer)
-        plot(Display_Table$Date, Display_Table$Sensitivity, type = "o", pch = 16, xlab = "Time Period", ylab = "Sensitivity", main = "Line Chart")
-      } else if (selectTime == "weekly") {
+        #plot(Display_Table$Date, Display_Table$Sensitivity, type = "o", pch = 16, xlab = "Time Period", ylab = "Sensitivity", main = "Line Chart")
+        plot_name <- paste("Daily data for", selectTrainer)
+        ggplot(Display_Table, aes(Date, Sensitivity)) + geom_point(fill = "blue", shape = 23, size = 3) + geom_line(colour = "brown") + ggtitle(plot_name) +
+          theme(plot.background = element_rect(fill = "azure3"))
+      } else if (selectTime == "Weekly") {
         Display_Table <- subset(Sensitivity_trainer_table_weekly, Sensitivity_trainer_table_weekly$Trainer_Name == selectTrainer)
-        plot(Display_Table$Week, Display_Table$Sensitivity, type = "o", pch = 16, xlab = "Time Period", ylab = "Sensitivity", main = "Line Chart")
+        #plot(Display_Table$Week, Display_Table$Sensitivity, type = "o", pch = 16, xlab = "Time Period", ylab = "Sensitivity", main = "Line Chart")
+        plot_name <- paste("Weekly data for", selectTrainer)
+        Display_Table$Week <- as.numeric(Display_Table$Week)
+        ggplot(Display_Table, aes(Week, Sensitivity)) + geom_point(fill = "blue", shape = 23, size = 3) + geom_line(colour = "brown") + ggtitle(plot_name) +
+          theme(plot.background = element_rect(fill = "azure3"))
       } else {
         Display_Table <- subset(Sensitivity_trainer_table_monthly, Sensitivity_trainer_table_monthly$Trainer_Name == selectTrainer)
-        plot(Display_Table$Month, Display_Table$Sensitivity, type = "o", pch = 16, xlab = "Time Period", ylab = "Sensitivity", main = "Line Chart")
+        #plot(Display_Table$Month, Display_Table$Sensitivity, type = "o", pch = 16, xlab = "Time Period", ylab = "Sensitivity", main = "Line Chart")
+        plot_name <- paste("Monthly data for", selectTrainer)
+        Display_Table$Month <- as.numeric(Display_Table$Month)
+        ggplot(Display_Table, aes(as.numeric(Month), Sensitivity)) + geom_point(fill = "blue", shape = 23, size = 3) + geom_line(colour = "brown") + ggtitle(plot_name) +
+          theme(plot.background = element_rect(fill = "azure3"))
       }
     } else {
-      if (selectTime == "daily") {
+      if (selectTime == "Daily") {
         Display_Table <- subset(Specificity_trainer_table_daily, Specificity_trainer_table_daily$Trainer_Name == selectTrainer)
-        plot(Display_Table$Date, Display_Table$Specificity, type = "o", pch = 16, xlab = "Time Period", ylab = "Specificity", main = "Line Chart")
+        #plot(Display_Table$Date, Display_Table$Specificity, type = "o", pch = 16, xlab = "Time Period", ylab = "Specificity", main = "Line Chart")
+        plot_name <- paste("Daily data for", selectTrainer)
+        ggplot(Display_Table, aes(Date, Specificity)) + geom_point(fill = "blue", shape = 23, size = 3) + geom_line(colour = "brown") + ggtitle(plot_name) +
+          theme(plot.background = element_rect(fill = "azure3"))
       } else if (selectTime == "weekly") {
         Display_Table <- subset(Specificity_trainer_table_weekly, Specificity_trainer_table_weekly$Trainer_Name == selectTrainer)
-        plot(Display_Table$Week, Display_Table$Specificity, type = "o", pch = 16, xlab = "Time Period", ylab = "Specificity", main = "Line Chart")
+        #plot(Display_Table$Week, Display_Table$Specificity, type = "o", pch = 16, xlab = "Time Period", ylab = "Specificity", main = "Line Chart")
+        plot_name <- paste("Weekly data for", selectTrainer)
+        Display_Table$Week <- as.numeric(Display_Table$Week)
+        ggplot(Display_Table, aes(as.numeric(Week), Specificity)) + geom_point(fill = "blue", shape = 23, size = 3) + geom_line(colour = "brown") + ggtitle(plot_name) +
+          theme(plot.background = element_rect(fill = "azure3"))
       } else {
         Display_Table <- subset(Specificity_trainer_table_monthly, Specificity_trainer_table_monthly$Trainer_Name == selectTrainer)
-        plot(Display_Table$Month, Display_Table$Specificity, type = "o", pch = 16, xlab = "Time Period", ylab = "Specificity", main = "Line Chart")
+        #plot(Display_Table$Month, Display_Table$Specificity, type = "o", pch = 16, xlab = "Time Period", ylab = "Specificity", main = "Line Chart")
+        plot_name <- paste("Monthly data for", selectTrainer)
+        Display_Table$Month <- as.numeric(Display_Table$Month)
+        ggplot(Display_Table, aes(as.numeric(Month), Specificity)) + geom_point(fill = "blue", shape = 23, size = 3) + geom_line(colour = "brown") + ggtitle(plot_name) +
+          theme(plot.background = element_rect(fill = "azure3"))
       }
     }
   })
   ###################### Rat Performance ###########################
   unique_rat_names <- sort(unique(TB_rat$RAT_NAME))
   
-  
+  # Input from UI
   output$ratSelect <- renderUI({
     # Create the selectInput with the dynamically generated choices
-    selectInput("Rat_Select", "Choose the rat", choices = unique_rat_names)
+    pickerInput(
+      inputId = "Indi_rat",
+      label = NULL,
+      choices = unique_rat_names,
+      selected = NULL,
+      multiple = FALSE,
+    )
   })
+  
+  # Accuracy by bacterial load
+  
+  
+  #
+  
   
   ###################### Overall Table ###########################
   
@@ -1112,20 +1252,20 @@ function(input, output, session){
       
       # Splitting the wanted subset with specific name
       # Loop over all levels
-        for (level in bacterial_level){
-          # Find the amount of total sample
-          Rat_level_total <- subset(Sample_Reuse_Subset, RAT_NAME == name & ID_STATUS == level)
-          # Find the amount of hit sample
-          Rat_level_hit <- subset(Sample_Reuse_Subset, RAT_NAME == name & ID_STATUS == level & HIT == "TRUE")
-          # Amount of this level
-          Amount_total <- nrow(Rat_level_total)
-          Amount_hit <- nrow(Rat_level_hit)
-          Amount_percentage <- Amount_hit * 100/ (Amount_total + 0.00000001)
-          # Column bind
-          new_row_total <- cbind(new_row_total, Amount_total)
-          new_row_hit <- cbind(new_row_hit, Amount_hit)
-          new_row_percentage <- cbind(new_row_percentage, Amount_percentage)
-        }
+      for (level in bacterial_level){
+        # Find the amount of total sample
+        Rat_level_total <- subset(Sample_Reuse_Subset, RAT_NAME == name & ID_STATUS == level)
+        # Find the amount of hit sample
+        Rat_level_hit <- subset(Sample_Reuse_Subset, RAT_NAME == name & ID_STATUS == level & HIT == "TRUE")
+        # Amount of this level
+        Amount_total <- nrow(Rat_level_total)
+        Amount_hit <- nrow(Rat_level_hit)
+        Amount_percentage <- Amount_hit * 100/ (Amount_total + 0.00000001)
+        # Column bind
+        new_row_total <- cbind(new_row_total, Amount_total)
+        new_row_hit <- cbind(new_row_hit, Amount_hit)
+        new_row_percentage <- cbind(new_row_percentage, Amount_percentage)
+      }
       
       # Add sensitivity column
       pos_sample <- subset(Sample_Reuse_Subset, RAT_NAME == name & ID_STATUS != 1)
@@ -1157,20 +1297,6 @@ function(input, output, session){
     }
   }
   colnames(BacterialLevelTable) <- c("RAT_NAME", "SampleReuse", "UBL(0)", "Negative(1)",
-                               "1 AFB(2)", "2 AFB(3)", "3 AFB(4)", "4 AFB(5)",
-                               "5 AFB(6)", "6 AFB(7)", "7 AFB(8)", "8 AFB(9)",
-                               "9 AFB(10)", "1+(11)", "2+(12)", "3+(13)",
-                               " (14)", "10 AFB(15)", "11 AFB(16)", "12 AFB(17)",
-                               "13 AFB(18)", "14 AFB(19)", "15 AFB(20)",
-                               "16 AFB(21)", "17 AFB(22)", "18 AFB(23)",
-                               "19 AFB(24)", "Sensitivity","Total New case", "New Case Found")
-  
-  # Render the tables in the UI
-  output$BacterialLevelTable <- renderTable({
-    BacterialLevelTable
-  })
-  
-  colnames(HitTable) <- c("RAT_NAME", "SampleReuse", "UBL(0)", "Negative(1)",
                                      "1 AFB(2)", "2 AFB(3)", "3 AFB(4)", "4 AFB(5)",
                                      "5 AFB(6)", "6 AFB(7)", "7 AFB(8)", "8 AFB(9)",
                                      "9 AFB(10)", "1+(11)", "2+(12)", "3+(13)",
@@ -1180,11 +1306,11 @@ function(input, output, session){
                                      "19 AFB(24)", "Sensitivity","Total New case", "New Case Found")
   
   # Render the tables in the UI
-  output$HitTable <- renderTable({
-    HitTable
+  output$BacterialLevelTable <- renderTable({
+    BacterialLevelTable
   })
   
-  colnames(PercentageTable) <- c("RAT_NAME", "SampleReuse", "UBL(0)", "Negative(1)",
+  colnames(HitTable) <- c("RAT_NAME", "SampleReuse", "UBL(0)", "Negative(1)",
                           "1 AFB(2)", "2 AFB(3)", "3 AFB(4)", "4 AFB(5)",
                           "5 AFB(6)", "6 AFB(7)", "7 AFB(8)", "8 AFB(9)",
                           "9 AFB(10)", "1+(11)", "2+(12)", "3+(13)",
@@ -1194,10 +1320,24 @@ function(input, output, session){
                           "19 AFB(24)", "Sensitivity","Total New case", "New Case Found")
   
   # Render the tables in the UI
+  output$HitTable <- renderTable({
+    HitTable
+  })
+  
+  colnames(PercentageTable) <- c("RAT_NAME", "SampleReuse", "UBL(0)", "Negative(1)",
+                                 "1 AFB(2)", "2 AFB(3)", "3 AFB(4)", "4 AFB(5)",
+                                 "5 AFB(6)", "6 AFB(7)", "7 AFB(8)", "8 AFB(9)",
+                                 "9 AFB(10)", "1+(11)", "2+(12)", "3+(13)",
+                                 " (14)", "10 AFB(15)", "11 AFB(16)", "12 AFB(17)",
+                                 "13 AFB(18)", "14 AFB(19)", "15 AFB(20)",
+                                 "16 AFB(21)", "17 AFB(22)", "18 AFB(23)",
+                                 "19 AFB(24)", "Sensitivity","Total New case", "New Case Found")
+  
+  # Render the tables in the UI
   output$PercentageTable <- renderTable({
     PercentageTable
   })
-
+  
   # Render the rat hit Analyst in the UI
   output$ratHitAnalystInputs <- renderUI({
     fluidRow(
@@ -1209,7 +1349,7 @@ function(input, output, session){
       )
     )
   })
-
+  
   # Rat Hit Analysis
   output$barplot <- renderPlot({
     rat_df <- HitTable[HitTable$RAT_NAME == input$rat & HitTable$SampleReuse == input$sample_reuse, ] # Subset data for the selected rat
@@ -1218,9 +1358,9 @@ function(input, output, session){
             xlab = "Bacterial Level", ylab = "Number of Hits",
             main = paste("Rat:", input$rat, " - Sample Reuse:", input$sample_reuse))
   })
-
+  
   ############## Connection of two tables ##################
-
+  
   # Render the tables in the UI
   output$Selected_Bac_Level <- renderTable({
     Selected_Bac_Level <- subset(BacterialLevelTable, RAT_NAME == input$rat & SampleReuse == input$sample_reuse)
@@ -1239,5 +1379,5 @@ function(input, output, session){
     Selected_Percentage
   })
   
-# Server end mark
+  # Server end mark
 }

@@ -10,6 +10,8 @@
 library(shiny)
 library(readxl)
 library(shinydashboard)
+library(scales)
+library(shinyWidgets)
 
 
 # Define UI for application that draws a histogram
@@ -69,65 +71,26 @@ ui <- dashboardPage(
                 id = "overviewTabs",
                 tabPanel("Total Program Results",
                          fluidRow(
-                           column(width = 6,
-                                  div(
-                                    style = "overflow-x: auto; max-height: 600px;",
-                                    tableOutput("TPR"),
-                                    style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif; table-layout: fixed;",
-                                    class = "custom-table"
-                                  )
-                           ),
-                           column(width = 6,
-                                  plotOutput("pieChart")
-                           )
+                           column(4,DT::dataTableOutput("TPR")),
+                           column(6, plotOutput("pieChart"))
                          )
                 ),
                 tabPanel("Program-Level Sample Details",
-                         fluidRow(
-                           column(width = 6,
-                                  h4("DOTS Cases"),
-                                  div(
-                                    style = "overflow-x: auto; max-height: 600px;",
-                                    tableOutput("PLSD_DOTs"),
-                                    style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif;",
-                                    class = "custom-table"
-                                  )
-                           ),
-                          column(width = 6,
-                                  plotOutput("barChart_Dots")
-                           )
-                          ),
-                         fluidRow(
-                           column(width = 6,
-                                  h4("New Samples"),
-                                  div(
-                                    style = "overflow-x: auto; max-height: 600px;",
-                                    tableOutput("PLSD_newcase"),
-                                    style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif;",
-                                    class = "custom-table"
-                                  )
-                           )
-                         ,
-                          column(width = 6,
-                                plotOutput("barChart_newcases")
-                           )
+                         h3("DOTS Cases"),
+                         fluidRow( 
+                           column(4, DT::dataTableOutput("PLSD_DOTs")), 
+                           column(6, plotOutput("barChart_Dots"))
                          )
+                         ,
+                         h3("New Cases"),
+                         fluidRow(  column(4, DT::dataTableOutput("PLSD_newcase")), 
+                                    column(6, plotOutput("barChart_newcases"))
+                         )
+                         
                 ),
                 tabPanel("Average Individual Rat Results",
-                         fluidRow(
-                           column(width = 12,
-                                  div(
-                                    style = "overflow-x: auto; max-height: 600px;",
-                                    tableOutput("AIRR"),
-                                    style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif;",
-                                    class = "custom-table"
-                                  )
-                           )
-                         ,
-                          column(width = 12,
-                                 plotOutput("sensitivitySpecificityPlot")
-                          )
-                         )
+                         splitLayout(
+                           DT::dataTableOutput("AIRR"), plotOutput("sensitivitySpecificityPlot"))
                 ),
                 tabPanel("Average Rat Sample Details",
                          fluidRow(
@@ -135,7 +98,7 @@ ui <- dashboardPage(
                                   h4("DOTS Cases"),
                                   div(
                                     style = "overflow-x: auto; max-height: 600px;",
-                                    tableOutput("ARSD_DOTs"),
+                                    DT::dataTableOutput("ARSD_DOTs"),
                                     style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif;",
                                     class = "custom-table"
                                   )
@@ -146,7 +109,7 @@ ui <- dashboardPage(
                                   h4("New Samples"),
                                   div(
                                     style = "overflow-x: auto; max-height: 600px;",
-                                    tableOutput("ARSD_newcase"),
+                                    DT::dataTableOutput("ARSD_newcase"),
                                     style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif;",
                                     class = "custom-table"
                                   )
@@ -156,40 +119,41 @@ ui <- dashboardPage(
               )
       ),
       tabItem("Rat_Hit_Analyst",
-                h2("Rat Hit Analyst"),
-                fluidRow(
+              h2("Rat Hit Analyst"),
+              fluidRow(
+                box(
+                  uiOutput("ratHitAnalystInputs")
+                )
+              ),
+              fluidRow(
+                column(
+                  width = 12,
                   box(
-                    uiOutput("ratHitAnalystInputs")
+                    title = "Relative data",
+                    style = "height:500px; overflow-y: scroll;overflow-x: scroll;",
+                    h4("Sample Number as chosen"),
+                    tableOutput("Selected_Bac_Level"),
+                    h4("Total Hits as chosen"),
+                    tableOutput("Selected_Hits"),
+                    h4("Percentage as chosen (in %)"),
+                    tableOutput("Selected_Percentage")
                   )
                 ),
-                fluidRow(
-                  column(
-                    width = 12,
-                    box(
-                      title = "Relative data",
-                      style = "height:500px; overflow-y: scroll;overflow-x: scroll;",
-                      h4("Sample Number as chosen"),
-                      tableOutput("Selected_Bac_Level"),
-                      h4("Total Hits as chosen"),
-                      tableOutput("Selected_Hits"),
-                      h4("Percentage as chosen (in %)"),
-                      tableOutput("Selected_Percentage")
-                    )
-                  )
-                ),
-                fluidRow(
+                column(
+                  width = 10,
                   box(
                     title = "Bar Chart",
                     plotOutput("barplot")
                   )
                 )
+              )
       ),
       tabItem("Rat_Performance",
               h2("Rat Performance Tab Content"),
               tabsetPanel(
-                tabPanel("Sen", tableOutput("basicInformation_Sensitivity")),
-                tabPanel("Spe", tableOutput("basicInformation_Specificity")),
-                tabPanel("Ind per", plotOutput("Individual_rat_performance"))
+                tabPanel("Sensitivity", DT::dataTableOutput("basicInformation_Sensitivity")),
+                tabPanel("Specificity", DT::dataTableOutput("basicInformation_Specificity")),
+                tabPanel("Visualization", plotOutput("Individual_rat_performance"))
               )
       ),
       tabItem("Rat_Visualized_Data",
@@ -199,14 +163,14 @@ ui <- dashboardPage(
       tabItem("Trainer_Analysis",
               h2("Analysis Trainer by time"),
               tabsetPanel(
-                tabPanel("O_Sen", tableOutput("Trainer_Sensitivity")),
-                tabPanel("O_Spe", tableOutput("Trainer_Specificity")),
-                tabPanel("D_Sen", tableOutput("Sensitivity_trainer_table_daily")),
-                tabPanel("D_Spe", tableOutput("Specificity_trainer_table_daily")),
-                tabPanel("W_Sen", tableOutput("Sensitivity_trainer_table_weekly")),
-                tabPanel("W_Spe", tableOutput("Specificity_trainer_table_weekly")),
-                tabPanel("M_Sen", tableOutput("Sensitivity_trainer_table_monthly")),
-                tabPanel("M_Spe", tableOutput("Specificity_trainer_table_monthly"))
+                tabPanel("Overall Sen", DT::dataTableOutput("Trainer_Sensitivity")),
+                tabPanel("Overall Spe", DT::dataTableOutput("Trainer_Specificity")),
+                tabPanel("Daily Sen", DT::dataTableOutput("Sensitivity_trainer_table_daily")),
+                tabPanel("Daily Spe", DT::dataTableOutput("Specificity_trainer_table_daily")),
+                tabPanel("Weekly Sen", DT::dataTableOutput("Sensitivity_trainer_table_weekly")),
+                tabPanel("Weekly Spe", DT::dataTableOutput("Specificity_trainer_table_weekly")),
+                tabPanel("Monthly Sen", DT::dataTableOutput("Sensitivity_trainer_table_monthly")),
+                tabPanel("Monthly Spe", DT::dataTableOutput("Specificity_trainer_table_monthly"))
               )
       ),
       tabItem("Control_Time_Analysis",
@@ -214,8 +178,7 @@ ui <- dashboardPage(
               uiOutput("valueSelect"),
               uiOutput("trainerSelect"),
               uiOutput("timeSelect"),
-              plotOutput("LineChart"),
-              tableOutput("trainertable")
+              splitLayout(plotOutput("LineChart"), DT::dataTableOutput("trainertable"))
               
       ),
       tabItem("Reused_Analyst",
@@ -228,14 +191,14 @@ ui <- dashboardPage(
               h2("Overall Table"),
               tabsetPanel(
                 tabPanel("bac_level",
-                  fluidRow(
-                    column(width = 12,
-                           div(
-                             style = "height:500px; overflow-y: scroll;overflow-x: scroll;",
-                             tableOutput("BacterialLevelTable")
+                         fluidRow(
+                           column(width = 12,
+                                  div(
+                                    style = "height:500px; overflow-y: scroll;overflow-x: scroll;",
+                                    tableOutput("BacterialLevelTable")
+                                  )
                            )
-                    )
-                  )
+                         )
                 ),
                 tabPanel("Hit",
                          fluidRow(
