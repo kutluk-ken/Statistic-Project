@@ -383,6 +383,11 @@ function(input, output, session){
   # Create a Name List without duplication
   # unique_names <- unique(TB_rat$TRAINER)
   
+  
+  
+  #fix
+  
+  
   # Create a Day List without duplication
   unique_weeks <- unique(TB_rat$week_numbers)
   
@@ -585,6 +590,21 @@ function(input, output, session){
   
   
   # Total Program Results
+  
+  # Calculate the required values based on the filtered data
+  TotalDOTSPos <- n_distinct(subset(TB_Adtl, ID_BL_DOTS != 1)$ID_SAMPLE)
+  TotalDotsPosPatient <- n_distinct(subset(TB_Adtl, ID_BL_DOTS != 1)$ID_PATIENT)
+  TotalBlindSample <- n_distinct(subset(TB_Adtl, STATUS_BLINDPOS == "TRUE")$ID_SAMPLE)
+  TotalBlindPatient <- n_distinct(subset(TB_Adtl, STATUS_BLINDPOS == "TRUE")$ID_PATIENT)
+  TotalDotsNegative <- n_distinct(subset(TB_Adtl, ID_BL_DOTS == 1)$ID_SAMPLE)
+  TotalDotsNegPatient <- n_distinct(subset(TB_Adtl, ID_BL_DOTS == 1)$ID_PATIENT)
+  TotalNegativeIndicated <- n_distinct(subset(TB_Adtl, ID_BL_DOTS == 1 & RatHit > 0)$ID_SAMPLE)
+  UnconfirmedNegHit <- n_distinct(subset(TB_Adtl, RatHit > 0 & ID_BL_DOTS == 1 & ID_BL_APOPO == 1)$ID_SAMPLE)
+  TotalNewCase <- n_distinct(subset(TB_Adtl, ID_BL_DOTS == 1 & ID_BL_APOPO > 1)$ID_SAMPLE)
+  TotalNewCasePatient <- n_distinct(subset(TB_Adtl, ID_BL_DOTS == 1 & ID_BL_APOPO > 1)$ID_PATIENT)
+  TotalSampleCase <- TotalDOTSPos + TotalDotsNegative
+  TotalPatientCase <- TotalDotsPosPatient + TotalDotsNegPatient
+  
   
   # Filter data base on user's choice
   filteredData <- reactive({
