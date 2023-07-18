@@ -691,7 +691,16 @@ function(input, output, session){
     datatable(overview_TPR)
   })
   
- 
+  # Program-Level Sample Details
+  TotalDOTSPos3Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 13)$ID_SAMPLE)
+  TotalDOTSPos2Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 12)$ID_SAMPLE)
+  TotalDOTSPos1Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 11)$ID_SAMPLE)
+  TotalNewCase1Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 11)$ID_SAMPLE)  
+  TotalNewCase2Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 12)$ID_SAMPLE)  
+  TotalNewCase3Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 13)$ID_SAMPLE)  
+  TotalDOTSPosScanty <- TotalDOTSPos - TotalDOTSPos3Plus - TotalDOTSPos2Plus - TotalDOTSPos1Plus # CHECK!!! 
+  TotalNewCaseScanty <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS > 1)$ID_SAMPLE) - TotalNewCase1Plus - TotalNewCase2Plus - TotalNewCase3Plus
+  
 
   
   #  Create the data for the Program-Level Sample Details table
