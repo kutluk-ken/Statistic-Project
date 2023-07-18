@@ -606,7 +606,7 @@ function(input, output, session){
   TotalPatientCase <- TotalDotsPosPatient + TotalDotsNegPatient
   
   
-  # Filter data base on user's choice
+  # Filter data base on user's choice - Overview table
   filteredData <- reactive({
     if (input$timePeriod == "Overall") {
       TB_Adtl
@@ -648,21 +648,22 @@ function(input, output, session){
   output$pieChart <- renderPlot({
     filteredData <- filteredData()
     
-    # # Calculate the proportions for each category
-    # TotalDOTSPos <- n_distinct(subset(filteredData, ID_BL_DOTS != 1)$ID_SAMPLE)
-    # TotalBlindSample <- n_distinct(subset(filteredData, STATUS_BLINDPOS == "TRUE")$ID_SAMPLE)
-    # TotalDotsNegative <- n_distinct(subset(filteredData, ID_BL_DOTS == 1)$ID_SAMPLE)
-    # TotalNewCase <- n_distinct(subset(filteredData, ID_BL_DOTS == 1 & ID_BL_APOPO > 1)$ID_SAMPLE)
-    # TotalSampleCase <- TotalDOTSPos + TotalDotsNegative
+    TotalDOTSPos_Filter <- n_distinct(subset(filteredData, ID_BL_DOTS != 1)$ID_SAMPLE)
+    TotalDotsNegative_Filter <- n_distinct(subset(filteredData, ID_BL_DOTS == 1)$ID_SAMPLE)
+    Total <- TotalDOTSPos_Filter + TotalDotsNegative_Filter
+    TotalBlindSample_Filter <- n_distinct(subset(filteredData, STATUS_BLINDPOS == "TRUE")$ID_SAMPLE)
+    TotalNewCase_Filter <- n_distinct(subset(filteredData, ID_BL_DOTS == 1 & ID_BL_APOPO > 1)$ID_SAMPLE)
+    
+    
     
     proportions <- c(
-      "DOTS Positive Sample" = TotalDOTSPos/TotalSampleCase,
-      "Blinds Sample" = TotalBlindSample/TotalSampleCase,
-      "New cases" = TotalNewCase/TotalSampleCase,
-      "DOTS Negative Sample" = TotalDotsNegative/TotalSampleCase
+      "DOTS Positive Sample" = TotalDOTSPos_Filter/Total,
+      "Blinds Sample" = TotalBlindSample_Filter/Total,
+      "New cases" = TotalNewCase_Filter/Total,
+      "DOTS Negative Sample" = TotalDotsNegative_Filter/Total
     )
     
-    proportions <- data.frame(name = names(proportions), value = proportions * TotalSampleCase)
+    proportions <- data.frame(name = names(proportions), value = proportions * Total)
     #pie(proportions, labels = names(proportions), main = "Category Distribution")
     ggplot(proportions, aes(x = "", y = value, fill = name))  + geom_col(color = "black") +
       geom_text(aes(label = value),
@@ -710,73 +711,161 @@ function(input, output, session){
     
     datatable(overview_TPR)
   })
+ 
   
-  # Program-Level Sample Details
-  TotalDOTSPos3Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 13)$ID_SAMPLE)
-  TotalDOTSPos2Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 12)$ID_SAMPLE)
-  TotalDOTSPos1Plus <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 11)$ID_SAMPLE)
-  TotalNewCase1Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 11)$ID_SAMPLE)  
-  TotalNewCase2Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 12)$ID_SAMPLE)  
-  TotalNewCase3Plus <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS == 13)$ID_SAMPLE)  
-  TotalDOTSPosScanty <- TotalDOTSPos - TotalDOTSPos3Plus - TotalDOTSPos2Plus - TotalDOTSPos1Plus # CHECK!!! 
-  TotalNewCaseScanty <- n_distinct(subset(TB_Adtl, (TB_Adtl$ID_BL_DOTS == 1 & TB_Adtl$ID_BL_APOPO > 0) & TB_Adtl$ID_STATUS > 1)$ID_SAMPLE) - TotalNewCase1Plus - TotalNewCase2Plus - TotalNewCase3Plus
+ # Program-Level Sample Details
+  filteredData_PLSD <- reactive({
+    if (input$timePeriod_PLSD == "Overall") {
+      TB_Adtl
+    } else if (input$timePeriod_PLSD == "Day") {
+      subset(TB_Adtl, as.Date(DATE) == input$date_PLSD)
+    } else if (input$timePeriod_PLSD == "Week") {
+      subset(TB_Adtl, week_numbers == input$week_PLSD)
+    } else if (input$timePeriod_PLSD == "Month") {
+      subset(TB_Adtl, month_numbers == input$month_PLSD)
+    }
+  })
   
-
+  output$dateInput_PLSD <- renderUI({
+    if (input$timePeriod_PLSD == "Day") {
+      selectInput("date_PLSD", "Select Date:", choices = unique(TB_Adtl$DATE), selected = Sys.Date())
+    } else {
+      NULL
+    }
+  })
   
-  #  Create the data for the Program-Level Sample Details table
-  overview_PLSD_DOTs <- data.frame(
-    "Bact load" = c("3+", "2+", "1+", "Scanty", "Total"),
-    "Total" = c(TotalDOTSPos3Plus, TotalDOTSPos2Plus, TotalDOTSPos1Plus, TotalDOTSPosScanty, TotalDOTSPos),
-    "Percentage" = c(paste0(round((TotalDOTSPos3Plus / TotalDOTSPos) * 100, 1), "%"),
-                     paste0(round((TotalDOTSPos2Plus / TotalDOTSPos) * 100, 1), "%"),
-                     paste0(round((TotalDOTSPos1Plus / TotalDOTSPos) * 100, 1),"%"),
-                     paste0(round((TotalDOTSPosScanty / TotalDOTSPos) * 100, 1),"%"), paste0(100.0,"%"))
-  ) 
-  overview_PLSD_newcase <- data.frame(
-    "Bact load" = c("3+", "2+", "1+", "Scanty", "Total"),
-    "Total" = c(TotalNewCase3Plus, TotalNewCase2Plus, TotalNewCase1Plus, TotalNewCaseScanty, TotalNewCase),
-    "Percentage" = c(paste0(round((TotalNewCase3Plus / TotalNewCase) * 100, 1), "%"), 
-                     paste0(round((TotalNewCase2Plus / TotalNewCase) * 100, 1), "%"),
-                     paste0(round((TotalNewCase1Plus / TotalNewCase) * 100, 1), "%"),
-                     paste0(round((TotalNewCaseScanty / TotalNewCase) * 100, 1), "%"),
-                     paste0(100.0,"%"))
-  ) 
+  output$weekInput_PLSD <- renderUI({
+    if (input$timePeriod_PLSD == "Week") {
+      selectInput("week_PLSD", "Select Week:", choices = unique(TB_Adtl$week_numbers))
+    } else {
+      NULL
+    }
+  })
   
-  
-  # Create visualizations for Program-Level Sample Details table
-  output$barChart_Dots <- renderPlot({
-    # Prepare the data
-    dots_cases <- data.frame(
-      Bact.load = c("3+", "2+", "1+", "Scanty"),
-      Total = c(TotalDOTSPos3Plus, TotalDOTSPos2Plus,
-                TotalDOTSPos1Plus, TotalDOTSPosScanty)
-    )
-    
-    # Create the bar chart
-    # barplot(dots_cases$Total, names.arg = dots_cases$Bact.load, xlab = "Bacterial Load", ylab = "Total Count", main = "DOTS Cases")
-    ggplot(dots_cases, aes(x=Bact.load, y=Total, color=Bact.load)) + geom_bar(stat="identity", fill="white") + theme(plot.title = element_text(face = "DOTS cases", size = 20)) })
-  
-  output$barChart_newcases <- renderPlot({
-    # Prepare the data
-    new_cases <- data.frame(
-      Bact.load = c("3+", "2+", "1+", "Scanty"),
-      Total = c(TotalNewCase3Plus, TotalNewCase2Plus,
-                TotalNewCase1Plus, TotalNewCaseScanty)
-    )
-    
-    # Create the bar chart
-    # barplot(new_cases$Total, names.arg = new_cases$Bact.load, xlab = "Bacterial Load", ylab = "Total Count", main = "New Cases")
-    ggplot(new_cases, aes(x = Bact.load, y = Total, color = Bact.load)) + geom_bar(stat="identity", fill="white") + theme(plot.title = element_text(face = "New cases", size = 20))
+  output$monthInput_PLSD <- renderUI({
+    if (input$timePeriod_PLSD == "Month") {
+      selectInput("month_PLSD", "Select Month:", choices = unique(TB_Adtl$month_numbers))
+    } else {
+      NULL
+    }
   })
   
   
   
+  
+  output$PLSD_DOTs <- renderDataTable({
+    filteredData <- filteredData_PLSD()
+    
+    # Calculate the required values based on the filtered data
+    TotalDOTSPos3Plus <- n_distinct(subset(filteredData, ID_BL_DOTS == 13)$ID_SAMPLE)
+    TotalDOTSPos2Plus <- n_distinct(subset(filteredData, ID_BL_DOTS == 12)$ID_SAMPLE)
+    TotalDOTSPos1Plus <- n_distinct(subset(filteredData, ID_BL_DOTS == 11)$ID_SAMPLE)
+    TotalDOTSPos_filter <- n_distinct(subset(filteredData, ID_BL_DOTS != 1)$ID_SAMPLE)
+    TotalDOTSPosScanty <- TotalDOTSPos_filter - TotalDOTSPos3Plus - TotalDOTSPos2Plus - TotalDOTSPos1Plus
+    
+    # Create the overview table with the calculated values
+    overview_PLSD_DOTs <- data.frame(
+      "Bact load" = c("3+", "2+", "1+", "Scanty", "Total"),
+      "Total" = c(TotalDOTSPos3Plus, TotalDOTSPos2Plus, TotalDOTSPos1Plus, TotalDOTSPosScanty, TotalDOTSPos_filter),
+      "Percentage" = c(
+        paste0(round((TotalDOTSPos3Plus / TotalDOTSPos_filter) * 100, 1), "%"),
+        paste0(round((TotalDOTSPos2Plus / TotalDOTSPos_filter) * 100, 1), "%"),
+        paste0(round((TotalDOTSPos1Plus / TotalDOTSPos_filter) * 100, 1), "%"),
+        paste0(round((TotalDOTSPosScanty / TotalDOTSPos_filter) * 100, 1), "%"),
+        paste0(100.0, "%")
+      )
+    )
+    
+    datatable(overview_PLSD_DOTs, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"), rowCallback = JS(rowCallback)))
+  })
+  
+  
+  output$PLSD_newcase <- renderDataTable({
+    filteredData <- filteredData_PLSD()
+    
+    # Calculate the required values based on the filtered data
+    TotalNewCase3Plus <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS == 13)$ID_SAMPLE)
+    TotalNewCase2Plus <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS == 12)$ID_SAMPLE)
+    TotalNewCase1Plus <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS == 11)$ID_SAMPLE)
+    TotalNewCaseScanty <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS > 1)$ID_SAMPLE) - TotalNewCase1Plus - TotalNewCase2Plus - TotalNewCase3Plus
+    TotalNewCase_filter <- n_distinct(subset(filteredData, ID_BL_DOTS == 1 & ID_BL_APOPO > 1)$ID_SAMPLE)
+    
+    
+    
+    # Create the overview table with the calculated values
+    overview_PLSD_newcase <- data.frame(
+      "Bact load" = c("3+", "2+", "1+", "Scanty", "Total"),
+      "Total" = c(TotalNewCase3Plus, TotalNewCase2Plus, TotalNewCase1Plus, TotalNewCaseScanty, TotalNewCase_filter),
+      "Percentage" = c(
+        paste0(round((TotalNewCase3Plus / TotalNewCase_filter) * 100, 1), "%"),
+        paste0(round((TotalNewCase2Plus / TotalNewCase_filter) * 100, 1), "%"),
+        paste0(round((TotalNewCase1Plus / TotalNewCase_filter) * 100, 1), "%"),
+        paste0(round((TotalNewCaseScanty / TotalNewCase_filter) * 100, 1), "%"),
+        paste0(100.0, "%")
+      )
+    )
+    
+    datatable(overview_PLSD_newcase, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+      "}"), rowCallback = JS(rowCallback)))
+  })
+  
+ 
+  # Create the bar chart Dots
+  output$barChart_Dots <- renderPlot({
+    filteredData <- filteredData_PLSD()
+    
+    # Calculate the required values based on the filtered data
+    TotalDOTSPos3Plus_F <- n_distinct(subset(filteredData, ID_BL_DOTS == 13)$ID_SAMPLE)
+    TotalDOTSPos2Plus_F <- n_distinct(subset(filteredData, ID_BL_DOTS == 12)$ID_SAMPLE)
+    TotalDOTSPos1Plus_F <- n_distinct(subset(filteredData, ID_BL_DOTS == 11)$ID_SAMPLE)
+    TotalDOTSPosScanty_F <- TotalDOTSPos - TotalDOTSPos3Plus - TotalDOTSPos2Plus - TotalDOTSPos1Plus
+    
+    # Prepare the data
+    dots_cases <- data.frame(
+      Bact.load = c("3+", "2+", "1+", "Scanty"),
+      Total = c(TotalDOTSPos3Plus_F, TotalDOTSPos2Plus_F,
+                TotalDOTSPos1Plus_F, TotalDOTSPosScanty_F)
+    )
+    ggplot(dots_cases, aes(x = Bact.load, y = Total, color = Bact.load)) +
+      geom_bar(stat = "identity", fill = "white") +
+      labs(x = "Bacterial Load", y = "Total Count", title = "DOTS Cases") +
+      theme(plot.title = element_text(face = "bold", size = 20)) +
+      labs(title = "DOTS Cases")
+  })
+  
+
+  # Create the bar chart newcases
+  output$barChart_newcases <- renderPlot({
+    filteredData <- filteredData_PLSD()
+    
+    # Calculate the required values based on the filtered data
+    TotalNewCase3Plus_F <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS == 13)$ID_SAMPLE)
+    TotalNewCase2Plus_F <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS == 12)$ID_SAMPLE)
+    TotalNewCase1Plus_F <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS == 11)$ID_SAMPLE)
+    TotalNewCaseScanty_F <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS > 1)$ID_SAMPLE) - TotalNewCase1Plus - TotalNewCase2Plus - TotalNewCase3Plus
+    
+    # Prepare the data
+    new_cases <- data.frame(
+      Bact.load = c("3+", "2+", "1+", "Scanty"),
+      Total = c(TotalNewCase3Plus_F, TotalNewCase2Plus_F,
+                TotalNewCase1Plus_F, TotalNewCaseScanty_F)
+    )
+    ggplot(new_cases, aes(x = Bact.load, y = Total, color = Bact.load)) +
+      geom_bar(stat = "identity", fill = "white") +
+      labs(x = "Bacterial Load", y = "Total Count", title = "New Cases") +
+      theme(plot.title = element_text(face = "bold", size = 20)) +
+      labs(title = "New Cases")
+  })
+  
+  
   # Average Individual Rat Results
   TotalRats <- n_distinct(TB_rat$RAT_NAME)
-  # rat_hits <- TB_rat %>%
-  #   filter(HIT == "TRUE", ID_STATUS > 1) %>%
-  #   group_by(RAT_NAME) %>%
-  #   summarize(total_hits = n())
+  
   Average_Dots_Hits <- mean(Sensitivity_table_Dots$HIT_True)
   SD_Dots_Hits <- sd(Sensitivity_table_Dots$HIT_True)
   
@@ -833,139 +922,261 @@ function(input, output, session){
   
   # Average Rat Sample Details 
   
+  #filerdata
+  filteredData_ARSD <- reactive({
+    if (input$timePeriod_ARSD == "Overall") {
+      TB_Adtl
+    } else if (input$timePeriod_ARSD == "Day") {
+      subset(TB_Adtl, as.Date(DATE) == input$date_ARSD)
+    } else if (input$timePeriod_ARSD == "Week") {
+      subset(TB_Adtl, week_numbers == input$week_ARSD)
+    } else if (input$timePeriod_ARSD == "Month") {
+      subset(TB_Adtl, month_numbers == input$month_ARSD)
+    }
+  })
+  
+  output$dateInput_ARSD <- renderUI({
+    if (input$timePeriod_ARSD == "Day") {
+      selectInput("date_ARSD", "Select Date:", choices = unique(TB_Adtl$DATE), selected = Sys.Date())
+    } else {
+      NULL
+    }
+  })
+  
+  output$weekInput_ARSD <- renderUI({
+    if (input$timePeriod_ARSD == "Week") {
+      selectInput("week_ARSD", "Select Week:", choices = unique(TB_Adtl$week_numbers))
+    } else {
+      NULL
+    }
+  })
+  
+  output$monthInput_ARSD <- renderUI({
+    if (input$timePeriod_ARSD == "Month") {
+      selectInput("month_ARSD", "Select Month:", choices = unique(TB_Adtl$month_numbers))
+    } else {
+      NULL
+    }
+  })
+  
+  
   # DOTs cases
-  total3plusHit <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 13 &
-                                       TB_Adtl$RatHit > 0)$ID_SAMPLE)
-  total2plusHit <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 12 &
-                                       TB_Adtl$RatHit > 0)$ID_SAMPLE)
-  total1plusHit <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 11 &
-                                       TB_Adtl$RatHit > 0)$ID_SAMPLE)
-  totalScantyHit <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS != 11 &
-                                        TB_Adtl$ID_BL_DOTS != 12 &
-                                        TB_Adtl$ID_BL_DOTS != 13 &
-                                        TB_Adtl$ID_BL_DOTS != 1 &
-                                        TB_Adtl$ID_BL_DOTS != 0 &
-                                        TB_Adtl$RatHit > 0)$ID_SAMPLE)
-  # %HIT
-  percentage3plusHit <- total3plusHit/TotalDOTSPos3Plus
-  percentage2plusHit <- total2plusHit/TotalDOTSPos2Plus
-  percentage1plusHit <- total1plusHit/TotalDOTSPos1Plus
-  percentageScantyHit <- totalScantyHit/TotalDOTSPosScanty
-  
-  # 3+,2+,1+,Scanty
-  total123plusScantyHit <- total3plusHit + total2plusHit 
-  + total2plusHit+ totalScantyHit
-  
-  # %Total
-  percentage3plus <- TotalDOTSPos3Plus/TotalDOTSPos
-  percentage2plus <- TotalDOTSPos2Plus/TotalDOTSPos
-  percentage1plus <- TotalDOTSPos1Plus/TotalDOTSPos
-  percentageScanty <- TotalDOTSPosScanty/TotalDOTSPos
-  
-  
-  # NEW cases
-  TotalNewCase3PlushHit <- n_distinct(subset(TB_Adtl, 
-                                             (TB_Adtl$ID_BL_DOTS == 1 
-                                              & TB_Adtl$ID_BL_APOPO > 0)
-                                             & TB_Adtl$ID_STATUS == 13
-                                             & TB_Adtl$RatHit > 0)$ID_SAMPLE)  
-  TotalNewCase2PlushHit <- n_distinct(subset(TB_Adtl, 
-                                             (TB_Adtl$ID_BL_DOTS == 1 
-                                              & TB_Adtl$ID_BL_APOPO > 0)
-                                             & TB_Adtl$ID_STATUS == 12
-                                             & TB_Adtl$RatHit > 0)$ID_SAMPLE) 
-  TotalNewCase1PlushHit <- n_distinct(subset(TB_Adtl, 
-                                             (TB_Adtl$ID_BL_DOTS == 1 
-                                              & TB_Adtl$ID_BL_APOPO > 0)
-                                             & TB_Adtl$ID_STATUS == 11
-                                             & TB_Adtl$RatHit > 0)$ID_SAMPLE)
-  
-  TotalScantyHit_Newcase <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS != 11 &
-                                                TB_Adtl$ID_BL_DOTS != 12 &
-                                                TB_Adtl$ID_BL_DOTS != 13 &
-                                                TB_Adtl$ID_BL_DOTS == 1 &
-                                                TB_Adtl$ID_BL_APOPO > 0 &
-                                                TB_Adtl$RatHit > 0)$ID_SAMPLE)
-  
-  # %Hit
-  percentage3plusHit_NewCase <- TotalNewCase3PlushHit/TotalNewCase3Plus
-  percentage2plusHit_NewCase <- TotalNewCase2PlushHit/TotalNewCase2Plus
-  percentage1plusHit_NewCase <- TotalNewCase1PlushHit/TotalNewCase1Plus
-  percentageScanty_NewCase <- TotalScantyHit_Newcase/ TotalNewCaseScanty
-  
-  # 3+,2+,1+,Scanty - New sample
-  total123plusScantyHit_Newcase <- TotalNewCase3PlushHit + TotalNewCase2PlushHit
-  + TotalNewCase1PlushHit + TotalScantyHit_Newcase
-  # %Total
-  percentage3plus_Newcase <- TotalNewCase3Plus/TotalNewCase
-  percentage2plus_Newcase <- TotalNewCase2Plus/TotalNewCase
-  percentage1plus_Newcase <- TotalNewCase1Plus/TotalNewCase
-  percentageScanty_Newcase <- TotalNewCaseScanty/TotalNewCase
-  
-  #  Create the data for the Average Rat Sample Details table
-  overview_ARSD_Dots <- data.frame(
-    "Bact load" = c("3+", "2+", "1+", "Scanty", "Samples"),
-    "Percentage HIT" = c(percentage3plusHit, percentage2plusHit, percentage1plusHit,
-                         percentageScantyHit, total123plusScantyHit),
-    "Percentage Total" = c(paste0(round(percentage3plus * 100, 1), "%"),
-                           paste0(round(percentage2plus * 100, 1), "%"),
-                           paste0(round(percentage1plus * 100, 1),"%"),
-                           paste0(round(percentageScanty * 100, 1),"%"),
-                           paste0(100.0,"%"))
-  )
-  overview_ARSD_Newcase <- data.frame(
-    "Bact load" = c("3+", "2+", "1+", "Scanty", "Samples"),
-    "Percentage HIT" = c(percentage3plusHit_NewCase, percentage2plusHit_NewCase,
-                         percentage1plusHit_NewCase,percentageScanty_NewCase,
-                         total123plusScantyHit_Newcase),
-    "Percentage Total" = c(paste0(round(percentage3plus_Newcase * 100, 1), "%"), 
-                           paste0(round(percentage2plus_Newcase * 100, 1), "%"),
-                           paste0(round(percentage1plus_Newcase * 100, 1), "%"),
-                           paste0(round(percentageScanty * 100, 1), "%"),
-                           paste0(100.0,"%"))
-  ) 
-  
-  # Visualization for ARSD
-  # output$groupedBarPlot <- renderPlot({
-  #   # Combine the data frames
-  #   combined_data <- rbind(overview_ARSD_Dots, overview_ARSD_Newcase)
-  #   combined_data$Dataset <- rep(c("DOTS Cases", "New Samples"), each = nrow(overview_ARSD_Dots))
-  #   
-  #   # Convert Percentage Total to factor and set the order
-  #   combined_data$`Percentage Total` <- factor(combined_data$`Percentage Total`,
-  #                                              levels = c("100.0%", "28.8%", "29%", "21.7%", "20.5%"))
-  #   
-  #   # Create the grouped bar plot
-  #   ggplot(combined_data, aes(x = `Bact load`, y = `Percentage HIT`, fill = Dataset)) +
-  #     geom_bar(stat = "identity", position = "dodge") +
-  #     labs(x = "Bact load", y = "Percentage HIT", fill = "Dataset") +
-  #     theme_minimal()
-  # })
-  
-  # Total Program Results table in UI
-  output$TPR <- DT::renderDataTable({
-    datatable(overview_TPR, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+  output$ARSD_DOTs <- DT::renderDataTable({
+    filteredData <- filteredData_ARSD()
+    
+    total3plusHit <- n_distinct(subset(filteredData, filteredData$ID_BL_DOTS == 13 &
+                                         filteredData$RatHit > 0)$ID_SAMPLE)
+    total2plusHit <- n_distinct(subset(filteredData, filteredData$ID_BL_DOTS == 12 &
+                                         filteredData$RatHit > 0)$ID_SAMPLE)
+    total1plusHit <- n_distinct(subset(filteredData, filteredData$ID_BL_DOTS == 11 &
+                                         filteredData$RatHit > 0)$ID_SAMPLE)
+    totalScantyHit <- n_distinct(subset(filteredData, filteredData$ID_BL_DOTS != 11 &
+                                          filteredData$ID_BL_DOTS != 12 &
+                                          filteredData$ID_BL_DOTS != 13 &
+                                          filteredData$ID_BL_DOTS != 1 &
+                                          filteredData$ID_BL_DOTS != 0 &
+                                          filteredData$RatHit > 0)$ID_SAMPLE)
+    
+    TotalDOTSPos3Plus_Filter <- n_distinct(subset(filteredData, ID_BL_DOTS == 13)$ID_SAMPLE)
+    TotalDOTSPos2Plus_Filter <- n_distinct(subset(filteredData, ID_BL_DOTS == 12)$ID_SAMPLE)
+    TotalDOTSPos1Plus_Filter <- n_distinct(subset(filteredData, ID_BL_DOTS == 11)$ID_SAMPLE)
+    TotalDOTSPos_Filter <- n_distinct(subset(filteredData, ID_BL_DOTS != 1)$ID_SAMPLE)
+    TotalDOTSPosScanty_Filter <- TotalDOTSPos_Filter - TotalDOTSPos3Plus_Filter - TotalDOTSPos2Plus_Filter - TotalDOTSPos1Plus_Filter
+
+    
+    
+    # %HIT
+    percentage3plusHit <- total3plusHit/TotalDOTSPos3Plus_Filter
+    percentage2plusHit <- total2plusHit/TotalDOTSPos3Plus_Filter
+    percentage1plusHit <- total1plusHit/TotalDOTSPos3Plus_Filter
+    percentageScantyHit <- totalScantyHit/TotalDOTSPosScanty_Filter
+    
+    # 3+,2+,1+,Scanty
+    total123plusScantyHit <- total3plusHit + total2plusHit 
+    + total2plusHit+ totalScantyHit
+    
+    # %Total
+    percentage3plus <- TotalDOTSPos3Plus_Filter/TotalDOTSPos_Filter
+    percentage2plus <- TotalDOTSPos2Plus_Filter/TotalDOTSPos_Filter
+    percentage1plus <- TotalDOTSPos1Plus_Filter/TotalDOTSPos_Filter
+    percentageScanty <- TotalDOTSPosScanty_Filter/TotalDOTSPos_Filter
+    
+    #  Create the dataframe for the Average Rat Sample Details table
+    overview_ARSD_Dots <- data.frame(
+      "Bact load" = c("3+", "2+", "1+", "Scanty", "Samples"),
+      "Percentage HIT" = c(percentage3plusHit, percentage2plusHit, percentage1plusHit,
+                           percentageScantyHit, total123plusScantyHit),
+      "Percentage Total" = c(paste0(round(percentage3plus * 100, 1), "%"),
+                             paste0(round(percentage2plus * 100, 1), "%"),
+                             paste0(round(percentage1plus * 100, 1),"%"),
+                             paste0(round(percentageScanty * 100, 1),"%"),
+                             paste0(100.0,"%"))
+    )
+
+    datatable(overview_ARSD_Dots, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
       "function(settings, json) {",
       "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
       "}"), rowCallback = JS(rowCallback)))
   })
   
-  # Program-Level Sample Details in UI
-  output$PLSD_DOTs <- DT::renderDataTable({
-    datatable(overview_PLSD_DOTs, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+  # New cases
+  output$ARSD_newcase <- DT::renderDataTable({
+    filteredData <- filteredData_ARSD()
+    
+    TotalNewCase3PlushHit <- n_distinct(subset(filteredData, 
+                                               (filteredData$ID_BL_DOTS == 1 
+                                                & filteredData$ID_BL_APOPO > 0)
+                                               & filteredData$ID_STATUS == 13
+                                               & filteredData$RatHit > 0)$ID_SAMPLE)  
+    TotalNewCase2PlushHit <- n_distinct(subset(filteredData, 
+                                               (filteredData$ID_BL_DOTS == 1 
+                                                & filteredData$ID_BL_APOPO > 0)
+                                               & filteredData$ID_STATUS == 12
+                                               & filteredData$RatHit > 0)$ID_SAMPLE) 
+    TotalNewCase1PlushHit <- n_distinct(subset(filteredData, 
+                                               (filteredData$ID_BL_DOTS == 1 
+                                                & filteredData$ID_BL_APOPO > 0)
+                                               & filteredData$ID_STATUS == 11
+                                               & filteredData$RatHit > 0)$ID_SAMPLE)
+    
+    TotalScantyHit_Newcase <- n_distinct(subset(filteredData, filteredData$ID_BL_DOTS != 11 &
+                                                  filteredData$ID_BL_DOTS != 12 &
+                                                  filteredData$ID_BL_DOTS != 13 &
+                                                  filteredData$ID_BL_DOTS == 1 &
+                                                  filteredData$ID_BL_APOPO > 0 &
+                                                  filteredData$RatHit > 0)$ID_SAMPLE)
+    TotalNewCase3Plus_Filter <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS == 13)$ID_SAMPLE)
+    TotalNewCase2Plus_Filter <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS == 12)$ID_SAMPLE)
+    TotalNewCase1Plus_Filter <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS == 11)$ID_SAMPLE)
+    TotalNewCaseScanty_Filter <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS > 1)$ID_SAMPLE) - TotalNewCase1Plus - TotalNewCase2Plus - TotalNewCase3Plus
+    TotalNewCase_Filter <- n_distinct(subset(filteredData, ID_BL_DOTS == 1 & ID_BL_APOPO > 1)$ID_SAMPLE)
+    
+    
+    # %Hit
+    percentage3plusHit_NewCase <- TotalNewCase3PlushHit/TotalNewCase3Plus_Filter
+    percentage2plusHit_NewCase <- TotalNewCase2PlushHit/TotalNewCase2Plus_Filter
+    percentage1plusHit_NewCase <- TotalNewCase1PlushHit/TotalNewCase1Plus_Filter
+    percentageScanty_NewCase <- TotalScantyHit_Newcase/ TotalNewCaseScanty_Filter
+    
+    # 3+,2+,1+,Scanty - New sample
+    total123plusScantyHit_Newcase <- TotalNewCase3PlushHit + TotalNewCase2PlushHit
+    + TotalNewCase1PlushHit + TotalScantyHit_Newcase
+    # %Total
+    percentage3plus_Newcase <- TotalNewCase3Plus_Filter/TotalNewCase_Filter
+    percentage2plus_Newcase <- TotalNewCase2Plus_Filter/TotalNewCase_Filter
+    percentage1plus_Newcase <- TotalNewCase1Plus_Filter/TotalNewCase_Filter
+    percentageScanty_Newcase <- TotalNewCaseScanty_Filter/TotalNewCase_Filter
+    
+    overview_ARSD_Newcase <- data.frame(
+      "Bact load" = c("3+", "2+", "1+", "Scanty", "Samples"),
+      "Percentage HIT" = c(percentage3plusHit_NewCase, percentage2plusHit_NewCase,
+                           percentage1plusHit_NewCase,percentageScanty_NewCase,
+                           total123plusScantyHit_Newcase),
+      "Percentage Total" = c(paste0(round(percentage3plus_Newcase * 100, 1), "%"), 
+                             paste0(round(percentage2plus_Newcase * 100, 1), "%"),
+                             paste0(round(percentage1plus_Newcase * 100, 1), "%"),
+                             paste0(round(percentageScanty_Newcase * 100, 1), "%"),
+                             paste0(100.0,"%"))
+    ) 
+    
+    datatable(overview_ARSD_Newcase, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
       "function(settings, json) {",
       "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
       "}"), rowCallback = JS(rowCallback)))
   })
   
   
-  output$PLSD_newcase <- DT::renderDataTable({
-    datatable(overview_PLSD_newcase, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
-      "function(settings, json) {",
-      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
-      "}"), rowCallback = JS(rowCallback)))
-  })
+  # total3plusHit <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 13 &
+  #                                      TB_Adtl$RatHit > 0)$ID_SAMPLE)
+  # total2plusHit <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 12 &
+  #                                      TB_Adtl$RatHit > 0)$ID_SAMPLE)
+  # total1plusHit <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS == 11 &
+  #                                      TB_Adtl$RatHit > 0)$ID_SAMPLE)
+  # totalScantyHit <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS != 11 &
+  #                                       TB_Adtl$ID_BL_DOTS != 12 &
+  #                                       TB_Adtl$ID_BL_DOTS != 13 &
+  #                                       TB_Adtl$ID_BL_DOTS != 1 &
+  #                                       TB_Adtl$ID_BL_DOTS != 0 &
+  #                                       TB_Adtl$RatHit > 0)$ID_SAMPLE)
+  # # %HIT
+  # percentage3plusHit <- total3plusHit/TotalDOTSPos3Plus
+  # percentage2plusHit <- total2plusHit/TotalDOTSPos2Plus
+  # percentage1plusHit <- total1plusHit/TotalDOTSPos1Plus
+  # percentageScantyHit <- totalScantyHit/TotalDOTSPosScanty
+  # 
+  # # 3+,2+,1+,Scanty
+  # total123plusScantyHit <- total3plusHit + total2plusHit 
+  # + total2plusHit+ totalScantyHit
+  # 
+  # # %Total
+  # percentage3plus <- TotalDOTSPos3Plus/TotalDOTSPos
+  # percentage2plus <- TotalDOTSPos2Plus/TotalDOTSPos
+  # percentage1plus <- TotalDOTSPos1Plus/TotalDOTSPos
+  # percentageScanty <- TotalDOTSPosScanty/TotalDOTSPos
   
+  
+  # # NEW cases
+  # TotalNewCase3PlushHit <- n_distinct(subset(TB_Adtl, 
+  #                                            (TB_Adtl$ID_BL_DOTS == 1 
+  #                                             & TB_Adtl$ID_BL_APOPO > 0)
+  #                                            & TB_Adtl$ID_STATUS == 13
+  #                                            & TB_Adtl$RatHit > 0)$ID_SAMPLE)  
+  # TotalNewCase2PlushHit <- n_distinct(subset(TB_Adtl, 
+  #                                            (TB_Adtl$ID_BL_DOTS == 1 
+  #                                             & TB_Adtl$ID_BL_APOPO > 0)
+  #                                            & TB_Adtl$ID_STATUS == 12
+  #                                            & TB_Adtl$RatHit > 0)$ID_SAMPLE) 
+  # TotalNewCase1PlushHit <- n_distinct(subset(TB_Adtl, 
+  #                                            (TB_Adtl$ID_BL_DOTS == 1 
+  #                                             & TB_Adtl$ID_BL_APOPO > 0)
+  #                                            & TB_Adtl$ID_STATUS == 11
+  #                                            & TB_Adtl$RatHit > 0)$ID_SAMPLE)
+  # 
+  # TotalScantyHit_Newcase <- n_distinct(subset(TB_Adtl, TB_Adtl$ID_BL_DOTS != 11 &
+  #                                               TB_Adtl$ID_BL_DOTS != 12 &
+  #                                               TB_Adtl$ID_BL_DOTS != 13 &
+  #                                               TB_Adtl$ID_BL_DOTS == 1 &
+  #                                               TB_Adtl$ID_BL_APOPO > 0 &
+  #                                               TB_Adtl$RatHit > 0)$ID_SAMPLE)
+  # 
+  # # %Hit
+  # percentage3plusHit_NewCase <- TotalNewCase3PlushHit/TotalNewCase3Plus
+  # percentage2plusHit_NewCase <- TotalNewCase2PlushHit/TotalNewCase2Plus
+  # percentage1plusHit_NewCase <- TotalNewCase1PlushHit/TotalNewCase1Plus
+  # percentageScanty_NewCase <- TotalScantyHit_Newcase/ TotalNewCaseScanty
+  # 
+  # # 3+,2+,1+,Scanty - New sample
+  # total123plusScantyHit_Newcase <- TotalNewCase3PlushHit + TotalNewCase2PlushHit
+  # + TotalNewCase1PlushHit + TotalScantyHit_Newcase
+  # # %Total
+  # percentage3plus_Newcase <- TotalNewCase3Plus/TotalNewCase
+  # percentage2plus_Newcase <- TotalNewCase2Plus/TotalNewCase
+  # percentage1plus_Newcase <- TotalNewCase1Plus/TotalNewCase
+  # percentageScanty_Newcase <- TotalNewCaseScanty/TotalNewCase
+  # 
+  # #  Create the data for the Average Rat Sample Details table
+  # overview_ARSD_Dots <- data.frame(
+  #   "Bact load" = c("3+", "2+", "1+", "Scanty", "Samples"),
+  #   "Percentage HIT" = c(percentage3plusHit, percentage2plusHit, percentage1plusHit,
+  #                        percentageScantyHit, total123plusScantyHit),
+  #   "Percentage Total" = c(paste0(round(percentage3plus * 100, 1), "%"),
+  #                          paste0(round(percentage2plus * 100, 1), "%"),
+  #                          paste0(round(percentage1plus * 100, 1),"%"),
+  #                          paste0(round(percentageScanty * 100, 1),"%"),
+  #                          paste0(100.0,"%"))
+  # )
+  # overview_ARSD_Newcase <- data.frame(
+  #   "Bact load" = c("3+", "2+", "1+", "Scanty", "Samples"),
+  #   "Percentage HIT" = c(percentage3plusHit_NewCase, percentage2plusHit_NewCase,
+  #                        percentage1plusHit_NewCase,percentageScanty_NewCase,
+  #                        total123plusScantyHit_Newcase),
+  #   "Percentage Total" = c(paste0(round(percentage3plus_Newcase * 100, 1), "%"), 
+  #                          paste0(round(percentage2plus_Newcase * 100, 1), "%"),
+  #                          paste0(round(percentage1plus_Newcase * 100, 1), "%"),
+  #                          paste0(round(percentageScanty * 100, 1), "%"),
+  #                          paste0(100.0,"%"))
+  # ) 
+  # 
   
   output$AIRR <- DT::renderDataTable({
     datatable(overview_AIRR, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
@@ -974,136 +1185,24 @@ function(input, output, session){
       "}"), rowCallback = JS(rowCallback)))
   })
   
-  output$ARSD_DOTs <- DT::renderDataTable({
-    datatable(overview_ARSD_Dots, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
-      "function(settings, json) {",
-      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
-      "}"), rowCallback = JS(rowCallback)))
-  })
-  
-  
-  
-  
-  output$ARSD_newcase <- DT::renderDataTable({
-    datatable(overview_ARSD_Newcase, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
-      "function(settings, json) {",
-      "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
-      "}"), rowCallback = JS(rowCallback)))
-  })
-  
-  # 
-  # output$selectedTable <- renderUI({
-  #   selectedTable <- input$tableSelect
-  #   if (is.null(selectedTable)) {
-  #     return()
-  #   }
-  #   
-  #   if (selectedTable == "Total Program Results") {
-  #     div(
-  #       style = "overflow-x: auto;",
-  #       tableOutput("TPR"),
-  #       class = "table-responsive"
-  #     )
-  #   } else if (selectedTable == "Program-Level Sample Details") {
-  #     div(
-  #       style = "overflow-x: auto;",
-  #       fluidRow(
-  #         column(width = 12,
-  #                h4("DOTS Cases"),
-  #                div(
-  #                  style = "overflow-x: auto;",
-  #                  tableOutput("PLSD_DOTs"),
-  #                  class = "table-responsive"
-  #                )
-  #         )
-  #       ),
-  #       fluidRow(
-  #         column(width = 12,
-  #                h4("New Samples"),
-  #                div(
-  #                  style = "overflow-x: auto;",
-  #                  tableOutput("PLSD_newcase"),
-  #                  class = "table-responsive"
-  #                )
-  #         )
-  #       )
-  #     )
-  #   } else if (selectedTable == "Average Individual Rat Results") {
-  #     div(
-  #       style = "overflow-x: auto;",
-  #       tableOutput("AIRR"),
-  #       class = "table-responsive"
-  #     )
-  #   } else if (selectedTable == "Average Rat Sample Details") {
-  #     div(
-  #       style = "overflow-x: auto;",
-  #       fluidRow(
-  #         column(width = 12,
-  #                h4("DOTS Cases"),
-  #                div(
-  #                  style = "overflow-x: auto;",
-  #                  tableOutput("ARSD_DOTs"),
-  #                  class = "table-responsive"
-  #                )
-  #         )
-  #       ),
-  #       fluidRow(
-  #         column(width = 12,
-  #                h4("New Samples"),
-  #                div(
-  #                  style = "overflow-x: auto;",
-  #                  tableOutput("ARSD_newcase"),
-  #                  class = "table-responsive"
-  #                )
-  #         )
-  #       )
-  #     )
-  #   }
+  # output$ARSD_DOTs <- DT::renderDataTable({
+  #   datatable(overview_ARSD_Dots, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+  #     "function(settings, json) {",
+  #     "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+  #     "}"), rowCallback = JS(rowCallback)))
   # })
   # 
-  # output$TPR <- renderTable({
-  #   if (is.null(input$tableSelect) || input$tableSelect != "Total Program Results") {
-  #     return(NULL)
-  #   }
-  #   overview_TPR
-  # })
   # 
-  # output$PLSD_DOTs <- renderTable({
-  #   if (is.null(input$tableSelect) || input$tableSelect != "Program-Level Sample Details") {
-  #     return(NULL)
-  #   }
-  #   overview_PLSD_DOTs
-  # })
   # 
-  # output$PLSD_newcase <- renderTable({
-  #   if (is.null(input$tableSelect) || input$tableSelect != "Program-Level Sample Details") {
-  #     return(NULL)
-  #   }
-  #   overview_PLSD_newcase
-  # })
   # 
-  # output$AIRR <- renderTable({
-  #   if (is.null(input$tableSelect) || input$tableSelect != "Average Individual Rat Results") {
-  #     return(NULL)
-  #   }
-  #   overview_AIRR
-  # })
-  # 
-  # output$ARSD_DOTs <- renderTable({
-  #   if (is.null(input$tableSelect) || input$tableSelect != "Average Rat Sample Details") {
-  #     return(NULL)
-  #   }
-  #   overview_ARSD_Dots
-  # })
-  # 
-  # output$ARSD_newcase <- renderTable({
-  #   if (is.null(input$tableSelect) || input$tableSelect != "Average Rat Sample Details") {
-  #     return(NULL)
-  #   }
-  #   overview_ARSD_Newcase
+  # output$ARSD_newcase <- DT::renderDataTable({
+  #   datatable(overview_ARSD_Newcase, options = list(pageLength = 10, lengthMenu = c(5, 10, 15, 20), initComplete = JS(
+  #     "function(settings, json) {",
+  #     "$(this.api().table().header()).css({'background-color': '#298', 'color': '#fff', 'text-align': 'center',});",
+  #     "}"), rowCallback = JS(rowCallback)))
   # })
   
-  
+
   # Render the tables in the UI
   # Reference for the table: https://stackoverflow.com/questions/43739218/r-datatable-formatting-with-javascript
   output$Sensitivity_trainer_table_daily <- DT::renderDataTable({

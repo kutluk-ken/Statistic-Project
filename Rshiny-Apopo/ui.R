@@ -81,46 +81,64 @@ ui <- dashboardPage(
                            column(6, plotOutput("pieChart"))
                          )
                 ),
-                tabPanel("Program-Level Sample Details",
-                         h3("DOTS Cases"),
-                         fluidRow( 
-                           column(4, DT::dataTableOutput("PLSD_DOTs")), 
-                           column(6, plotOutput("barChart_Dots"))
-                         )
-                         ,
-                         h3("New Cases"),
-                         fluidRow(  column(4, DT::dataTableOutput("PLSD_newcase")), 
-                                    column(6, plotOutput("barChart_newcases"))
-                         )
-                         
+                tabPanel(
+                  "Program-Level Sample Details",
+                  fluidRow(
+                    column(
+                      4,
+                      selectInput(
+                        "timePeriod_PLSD",
+                        "Select Time Period:",
+                        choices = c("Overall", "Day", "Week", "Month"),
+                        selected = "Overall"
+                      ),
+                      uiOutput("dateInput_PLSD"),
+                      uiOutput("weekInput_PLSD"),
+                      uiOutput("monthInput_PLSD"),
+                      DT::dataTableOutput("PLSD_DOTs"),
+                      DT::dataTableOutput("PLSD_newcase")
+                    ),
+                    column(6, plotOutput("barChart_Dots")),
+                    column(6, plotOutput("barChart_newcases"))
+                  )
                 ),
                 tabPanel("Average Individual Rat Results",
                          splitLayout(
                            DT::dataTableOutput("AIRR"), plotOutput("sensitivitySpecificityPlot"))
                 ),
-                tabPanel("Average Rat Sample Details",
-                         fluidRow(
-                           column(width = 12,
-                                  h4("DOTS Cases"),
-                                  div(
-                                    style = "overflow-x: auto; max-height: 600px;",
-                                    DT::dataTableOutput("ARSD_DOTs"),
-                                    style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif;",
-                                    class = "custom-table"
-                                  )
-                           )
-                         ),
-                         fluidRow(
-                           column(width = 12,
-                                  h4("New Samples"),
-                                  div(
-                                    style = "overflow-x: auto; max-height: 600px;",
-                                    DT::dataTableOutput("ARSD_newcase"),
-                                    style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif;",
-                                    class = "custom-table"
-                                  )
-                           )
-                         )
+                tabPanel(
+                  "Average Rat Sample Details",
+                  fluidRow(
+                    column(
+                      width = 4,
+                      selectInput(
+                        "timePeriod_ARSD",
+                        "Select Time Period:",
+                        choices = c("Overall", "Day", "Week", "Month"),
+                        selected = "Overall"
+                      ),
+                      uiOutput("dateInput_ARSD"),
+                      uiOutput("weekInput_ARSD"),
+                      uiOutput("monthInput_ARSD"),
+                      div(
+                        style = "overflow-x: auto; max-height: 600px;",
+                        DT::dataTableOutput("ARSD_DOTs"),
+                        style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif;",
+                        class = "custom-table"
+                      )
+                    )
+                  ),
+                  fluidRow(
+                    column(
+                      width = 4,
+                      div(
+                        style = "overflow-x: auto; max-height: 600px;",
+                        DT::dataTableOutput("ARSD_newcase"),
+                        style = "width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #ddd; font-size: 14px; font-family: Arial, sans-serif;",
+                        class = "custom-table"
+                      )
+                    )
+                  )
                 )
               )
       ),
