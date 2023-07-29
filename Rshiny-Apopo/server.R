@@ -823,7 +823,8 @@ function(input, output, session){
     TotalDOTSPos3Plus_F <- n_distinct(subset(filteredData, ID_BL_DOTS == 13)$ID_SAMPLE)
     TotalDOTSPos2Plus_F <- n_distinct(subset(filteredData, ID_BL_DOTS == 12)$ID_SAMPLE)
     TotalDOTSPos1Plus_F <- n_distinct(subset(filteredData, ID_BL_DOTS == 11)$ID_SAMPLE)
-    TotalDOTSPosScanty_F <- TotalDOTSPos - TotalDOTSPos3Plus - TotalDOTSPos2Plus - TotalDOTSPos1Plus
+    TotalDOTSPos_F <- n_distinct(subset(filteredData, ID_BL_DOTS != 1)$ID_SAMPLE)
+    TotalDOTSPosScanty_F <- TotalDOTSPos_F - TotalDOTSPos3Plus_F - TotalDOTSPos2Plus_F - TotalDOTSPos1Plus_F
     
     # Prepare the data
     dots_cases <- data.frame(
@@ -847,7 +848,7 @@ function(input, output, session){
     TotalNewCase3Plus_F <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS == 13)$ID_SAMPLE)
     TotalNewCase2Plus_F <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS == 12)$ID_SAMPLE)
     TotalNewCase1Plus_F <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS == 11)$ID_SAMPLE)
-    TotalNewCaseScanty_F <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS > 1)$ID_SAMPLE) - TotalNewCase1Plus - TotalNewCase2Plus - TotalNewCase3Plus
+    TotalNewCaseScanty_F <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS > 1)$ID_SAMPLE) - TotalNewCase1Plus_F - TotalNewCase2Plus_F - TotalNewCase3Plus_F
     
     # Prepare the data
     new_cases <- data.frame(
@@ -1048,7 +1049,7 @@ function(input, output, session){
     TotalNewCase3Plus_Filter <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS == 13)$ID_SAMPLE)
     TotalNewCase2Plus_Filter <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS == 12)$ID_SAMPLE)
     TotalNewCase1Plus_Filter <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS == 11)$ID_SAMPLE)
-    TotalNewCaseScanty_Filter <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS > 1)$ID_SAMPLE) - TotalNewCase1Plus - TotalNewCase2Plus - TotalNewCase3Plus
+    TotalNewCaseScanty_Filter <- n_distinct(subset(filteredData, (ID_BL_DOTS == 1 & ID_BL_APOPO > 0) & ID_STATUS > 1)$ID_SAMPLE) - TotalNewCase1Plus_Filter - TotalNewCase2Plus_Filter - TotalNewCase3Plus_Filter
     TotalNewCase_Filter <- n_distinct(subset(filteredData, ID_BL_DOTS == 1 & ID_BL_APOPO > 1)$ID_SAMPLE)
     
     
