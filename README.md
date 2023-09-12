@@ -31,6 +31,7 @@ Get a quick overview of the app's functionalities by watching our demo on [YouTu
 ## Contributors
 - [Ainiwaer Kuteluke](https://www.linkedin.com/in/kutluk-ken-anwar/)
 - [Junjie Ma](https://www.linkedin.com/in/junjie-m-aa128522b/)
+- [Huairu Chen](https://www.linkedin.com/in/huairu-chen-8a5a3724a/)
 
 ##
 Acknowledgments
